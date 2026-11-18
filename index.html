@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Osaka ไปไงดี — mockup</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,400;0,500;0,600;1,700;1,800&family=Nunito:ital,wght@0,500;0,600;0,700;0,800;1,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#fff; --ink:#1d1a4a; --mute:#8580b0; --line:#dcdaf0; --chip:#f4f3fc;
+  --soft:#b8b3ff; --pri:#8f8df7; --acc:#ff5fa8;
+  --bw:3px; --r:15px; --sh:5px 6px 0 var(--soft);
+  --spring:cubic-bezier(.34,1.56,.64,1);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{color:var(--ink);background:var(--page);font:500 15px/1.45 Nunito,Kanit,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0;text-align:left}
+#map{position:fixed;inset:0;background:#eeedf8}
+.leaflet-container{font:inherit}
+.leaflet-control-attribution{font-size:10px}
+.leaflet-tile-pane{filter:saturate(.55) brightness(1.04) hue-rotate(8deg)}
+
+/* ---------- floating column ---------- */
+.ui{position:fixed;top:16px;left:16px;bottom:16px;width:410px;display:flex;flex-direction:column;gap:12px;z-index:1000;pointer-events:none}
+.ui>*{pointer-events:auto}
+
+/* search control: thick ink line + hard offset shadow */
+.search{position:relative;background:#fff;border:var(--bw) solid var(--ink);border-radius:var(--r);box-shadow:var(--sh);margin-right:6px}
+.brand{display:flex;align-items:baseline;gap:8px;padding:10px 14px 2px}
+.brand b{font:italic 800 21px/1 Nunito,Kanit,sans-serif;letter-spacing:-.2px}
+.brand span{font-size:11.5px;color:var(--mute);font-weight:600}
+.row{display:flex;align-items:center;gap:10px;width:100%;padding:9px 14px;min-height:46px}
+.row+.row{border-top:1px solid var(--line)}
+.row small{display:block;font-size:11px;color:var(--mute);font-weight:600;line-height:1.1}
+.row b{font-weight:700}
+.dot{flex:none;width:14px;height:14px;border-radius:50%;border:var(--bw) solid var(--ink);background:#fff}
+.dot.to{background:var(--acc)}
+.row .caret{margin-left:auto;color:var(--mute);transition:transform .25s var(--spring)}
+.row[aria-expanded=true] .caret{transform:rotate(180deg)}
+#q{flex:1;min-width:0;border:0;outline:0;background:none;font-weight:600;padding:4px 0}
+#q::placeholder{color:var(--mute);font-weight:500}
+#clear{width:26px;height:26px;border-radius:50%;background:var(--chip);text-align:center;font-weight:800;color:var(--mute);display:none}
+.search.has-q #clear{display:block}
+.menu{position:absolute;left:-3px;right:-3px;top:calc(100% + 10px);margin:0;padding:6px;list-style:none;background:#fff;border:var(--bw) solid var(--ink);border-radius:var(--r);box-shadow:var(--sh);max-height:320px;overflow:auto;display:none;z-index:5;transform-origin:top center}
+.menu.open{display:block;animation:pop .28s var(--spring)}
+.menu li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer}
+.menu li:hover,.menu li.hl{background:var(--chip)}
+.menu li.off{color:var(--mute);cursor:default}
+.menu li.off:hover{background:none}
+.menu li em{margin-left:auto;font-style:normal;font-size:11.5px;color:var(--mute);font-weight:600}
+.menu li .sub{display:block;font-size:12px;color:var(--mute)}
+.menu .empty{color:var(--mute);cursor:default}
+
+/* pills */
+.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 6px 4px 0;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.pill{flex:none;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:13px;font-weight:600;white-space:nowrap;transition:transform .25s var(--spring),background .15s}
+.pill:hover{background:var(--chip)}
+.pill:active{transform:scale(.92)}
+.pill.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.pill i{width:9px;height:9px;border-radius:50%;background:var(--c);border:1.5px solid var(--ink)}
+.pill.on i{border-color:#fff}
+
+/* panel: thin line card */
+.panel{flex:1;min-height:0;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 30px rgba(29,26,74,.13);margin-right:6px}
+.panel h2{font-size:15px;font-weight:700;margin:0}
+.panel .hint{font-size:12.5px;color:var(--mute);margin:2px 0 0}
+.sec{padding:14px 16px}
+.sec+.sec{border-top:1px solid var(--line)}
+
+.place{display:flex;align-items:center;gap:12px;width:100%;padding:9px 8px;border-radius:12px;transition:transform .25s var(--spring),background .15s}
+.place:hover{background:var(--chip)}
+.place:active{transform:scale(.97)}
+.bub{flex:none;width:36px;height:36px;border-radius:50%;background:var(--c);border:2.5px solid var(--ink);display:grid;place-items:center}
+.bub svg{width:18px;height:18px}
+.place .nm{font-weight:700;line-height:1.25}
+.place .sb{font-size:12px;color:var(--mute)}
+.place .rt{margin-left:auto;text-align:right;white-space:nowrap}
+.place .rt b{display:block;font-weight:800}
+.place .rt span{font-size:11.5px;color:var(--mute)}
+
+.back{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:700;color:var(--mute);margin-bottom:8px}
+.back:hover{color:var(--ink)}
+.title{font:italic 800 24px/1.15 Nunito,Kanit,sans-serif;letter-spacing:-.2px;margin:0}
+.names{color:var(--mute);font-size:13px;margin:3px 0 8px}
+.desc{font-size:13.5px;margin:0}
+.fromto{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;margin-top:10px;color:var(--mute)}
+.fromto b{color:var(--ink)}
+
+/* route cards */
+.route{display:block;width:100%;border:1px solid var(--line);border-radius:14px;background:#fff;margin-top:10px;transition:transform .3s var(--spring),box-shadow .2s,border-color .2s}
+.route:first-of-type{margin-top:12px}
+.route.open{border:var(--bw) solid var(--ink);box-shadow:var(--sh);margin-bottom:16px}
+.route-head{display:block;width:100%;padding:12px 14px}
+.route-head:active{transform:scale(.98)}
+.r1{display:flex;align-items:center;gap:8px}
+.mode{flex:none;width:30px;height:30px;border-radius:9px;background:var(--chip);display:grid;place-items:center}
+.route.open .mode{background:var(--soft)}
+.mode svg{width:18px;height:18px}
+.r1 .ttl{font-weight:700}
+.tag{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--acc);color:#fff;transform:rotate(-3deg)}
+.r1 .time{margin-left:auto;font:italic 800 19px/1 Nunito,Kanit,sans-serif;white-space:nowrap}
+.r1 .time small{font:600 12px Nunito,Kanit,sans-serif;color:var(--mute);font-style:normal}
+.r2{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;font-size:12.5px;color:var(--mute);font-weight:600}
+.r2 .price{color:var(--ink);font-weight:800}
+.r2 .sep{opacity:.5}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border-radius:7px;background:var(--c);color:#fff;font-size:11.5px;font-weight:800;border:2px solid var(--ink);line-height:1}
+.chain{display:inline-flex;align-items:center;gap:4px}
+.chain i{font-style:normal;color:var(--mute)}
+.pass{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--ink);border:1px solid var(--line)}
+.pass.no{color:var(--mute);background:#fff}
+
+.steps{padding:4px 14px 12px;border-top:1px solid var(--line);animation:drop .3s var(--spring)}
+.step{display:grid;grid-template-columns:26px 1fr;gap:10px}
+.step .lane{display:flex;flex-direction:column;align-items:center;padding-top:12px}
+.step .node{flex:none;width:16px;height:16px;border-radius:50%;background:#fff;border:var(--bw) solid var(--ink)}
+.step .bar{flex:1;width:6px;margin:3px 0 -9px;border-radius:3px;background:var(--c)}
+.step.walk .bar,.step.taxi .bar{background:repeating-linear-gradient(var(--mute) 0 5px,transparent 5px 10px)}
+.step .body{padding:9px 0 9px}
+.step .hd{font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.step .meta{font-size:12.5px;color:var(--mute)}
+.step .tip{display:inline-block;margin-top:5px;font-size:12.5px;background:var(--chip);border-radius:9px;padding:5px 9px}
+.step.end .lane .node{background:var(--acc)}
+.step.end .body{padding-bottom:2px}
+.note{margin:12px 0 0;font-size:12px;color:var(--mute)}
+
+/* map pins */
+.pin{position:relative;width:36px;height:36px;border-radius:50%;background:var(--c);border:var(--bw) solid var(--ink);box-shadow:3px 4px 0 var(--soft);display:grid;place-items:center;transition:transform .3s var(--spring)}
+.pin svg{width:18px;height:18px}
+.pin:hover{transform:scale(1.15) rotate(-4deg)}
+.pin.sel{transform:scale(1.25);box-shadow:4px 5px 0 var(--ink);animation:squash .45s var(--spring)}
+.pin.dim{opacity:.28}
+.pin span{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;background:#fff;border:2px solid var(--ink);border-radius:8px;padding:1px 7px;font-size:12px;font-weight:700;display:none;pointer-events:none}
+.pin:hover span,.pin.sel span{display:block}
+.here{position:relative;width:22px;height:22px;border-radius:50%;background:var(--ink);border:4px solid #fff;box-shadow:0 0 0 3px var(--ink)}
+.here::after{content:"";position:absolute;inset:-12px;border-radius:50%;border:3px solid var(--pri);animation:ping 1.8s ease-out infinite}
+.here span{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%) rotate(-3deg);white-space:nowrap;background:var(--ink);color:#fff;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:700}
+.stn{width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--ink)}
+.leaflet-tooltip.stn-tip{background:#fff;border:2px solid var(--ink);border-radius:8px;color:var(--ink);font:700 11.5px Nunito,Kanit,sans-serif;padding:1px 6px;box-shadow:none}
+.leaflet-tooltip.stn-tip::before{display:none}
+
+.mock{position:fixed;right:12px;top:12px;z-index:1000;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--mute)}
+
+@keyframes pop{from{transform:scale(.9) translateY(-8px);opacity:0}}
+@keyframes drop{from{transform:translateY(-8px);opacity:0}}
+@keyframes squash{0%{transform:scale(.7,1.3)}45%{transform:scale(1.4,1.1)}100%{transform:scale(1.25)}}
+@keyframes ping{from{transform:scale(.5);opacity:1}to{transform:scale(1.5);opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+@media (max-width:720px){
+  .ui{top:10px;left:10px;right:10px;bottom:auto;width:auto;gap:8px}
+  .panel{position:fixed;left:0;right:0;bottom:0;max-height:46vh;margin:0;border-radius:20px 20px 0 0;border-width:1px 0 0}
+  .mock{display:none}
+  .brand{display:none}
+}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="ui">
+  <div class="search" id="search">
+    <div class="brand"><b>Osaka ไปไงดี</b><span>เลือกที่หมาย แล้วดูทุกวิธีไป</span></div>
+    <button class="row" id="originBtn" aria-expanded="false">
+      <span class="dot"></span>
+      <span><small>ต้นทาง</small><b id="originName">Nankai Namba</b></span>
+      <span class="caret">▾</span>
+    </button>
+    <label class="row">
+      <span class="dot to"></span>
+      <input id="q" autocomplete="off" placeholder="อยากไปไหน? เช่น ปราสาทโอซาก้า, USJ">
+      <button id="clear" aria-label="ล้างคำค้น">×</button>
+    </label>
+    <ul class="menu" id="originMenu"></ul>
+    <ul class="menu" id="suggest"></ul>
+  </div>
+  <div class="chips" id="chips"></div>
+  <aside class="panel" id="panel"></aside>
+</div>
+<div class="mock">Mockup · เวลาเป็นค่าประมาณ</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ================= DATA (mock) ================= */
+// Origins: where the traveller starts. access = [stationId, walk minutes, tip]
+const ORIGINS = [
+  {id:'namba', th:'Nankai Namba', ll:[34.6636,135.5019], access:[
+    ['nankaiNamba',0], ['namba',7,'ตามป้ายวงกลม “M” ลงชั้นใต้ดิน'], ['osakaNamba',8,'อยู่ใต้ดินฝั่งตะวันตกของ Namba'],
+    ['nippombashi',8,'เดินใต้ดินผ่าน Namba Walk ได้'], ['nambaBus',4,'ป้ายอยู่ริมถนนฝั่งตรงข้าม Takashimaya ไม่ใช่ในอาคารสถานีขนส่ง']]},
+  {id:'umeda', th:'Umeda / Osaka Station', ll:[34.7025,135.4959], access:[
+    ['osaka',0], ['umeda',5,'ลงใต้ดินตามป้าย “M” สีแดง'], ['higashiUmeda',6,'เดินใต้ดินผ่าน Whity Umeda']]},
+  {id:'shinOsaka', th:'Shin-Osaka', ll:[34.7335,135.5002], access:[
+    ['shinOsaka',3,'จากชานชาลาชินคันเซ็น ตามป้าย JR Line หรือ Subway']]},
+  {id:'tennoji', th:'Tennoji', ll:[34.6473,135.5140], access:[['tennoji',3]]},
+  {id:'kix', th:'สนามบินคันไซ (KIX)', ll:[34.4361,135.2440], access:[
+    ['kix',5,'สถานีเชื่อมกับอาคาร 1 ที่ชั้น 2 · ประตู Nankai (ป้ายแดง) กับ JR (ป้ายน้ำเงิน) อยู่ติดกัน']]}
+];
+let ORIGIN = ORIGINS[0];
+
+// Stations (coordinates approximate)
+const ST = {
+  nankaiNamba:{n:'Nankai Namba', ll:[34.6636,135.5019]},
+  namba:{n:'Namba', ll:[34.6664,135.5003]},
+  osakaNamba:{n:'Osaka-Namba', ll:[34.6672,135.4985]},
+  nambaBus:{n:'ป้ายรถ Namba', ll:[34.6655,135.4995], bus:true},
+  tempozan:{n:'ป้ายรถ Tempozan Harbor Village', ll:[34.6560,135.4320], bus:true},
+  shinsaibashi:{n:'Shinsaibashi', ll:[34.6750,135.5005]},
+  hommachi:{n:'Hommachi', ll:[34.6823,135.4988]},
+  yodoyabashi:{n:'Yodoyabashi', ll:[34.6925,135.5013]},
+  umeda:{n:'Umeda', ll:[34.7030,135.4975]},
+  shinOsaka:{n:'Shin-Osaka', ll:[34.7335,135.5002]},
+  daikokucho:{n:'Daikokucho', ll:[34.6590,135.4975]},
+  dobutsuen:{n:'Dobutsuen-mae', ll:[34.6490,135.5030]},
+  tennoji:{n:'Tennoji', ll:[34.6466,135.5137]},
+  osakako:{n:'Osakako', ll:[34.6537,135.4337]},
+  asashiobashi:{n:'Asashiobashi', ll:[34.6602,135.4494]},
+  bentencho:{n:'Bentencho', ll:[34.6690,135.4625]},
+  kujo:{n:'Kujo', ll:[34.6747,135.4735]},
+  awaza:{n:'Awaza', ll:[34.6826,135.4870]},
+  sakaisujiHommachi:{n:'Sakaisuji-Hommachi', ll:[34.6823,135.5065]},
+  tani4:{n:'Tanimachi 4-chome', ll:[34.6824,135.5173]},
+  morinomiya:{n:'Morinomiya', ll:[34.6817,135.5332]},
+  higashiUmeda:{n:'Higashi-Umeda', ll:[34.7005,135.5010]},
+  minamiMorimachi:{n:'Minami-Morimachi', ll:[34.6975,135.5110]},
+  temmabashi:{n:'Temmabashi', ll:[34.6895,135.5170]},
+  tani6:{n:'Tanimachi 6-chome', ll:[34.6745,135.5175]},
+  tani9:{n:'Tanimachi 9-chome', ll:[34.6667,135.5176]},
+  shitennojimae:{n:'Shitennoji-mae Yuhigaoka', ll:[34.6577,135.5167]},
+  nippombashi:{n:'Nippombashi', ll:[34.6672,135.5063]},
+  nagahoribashi:{n:'Nagahoribashi', ll:[34.6750,135.5063]},
+  ebisucho:{n:'Ebisucho', ll:[34.6587,135.5059]},
+  shinImamiya:{n:'Shin-Imamiya', ll:[34.6501,135.5010]},
+  tengachaya:{n:'Tengachaya', ll:[34.6370,135.4975]},
+  sakai:{n:'Sakai', ll:[34.5816,135.4665]},
+  sumiyoshitaisha:{n:'Sumiyoshitaisha', ll:[34.6130,135.4878]},
+  kix:{n:'Kansai Airport', ll:[34.4361,135.2440]},
+  osaka:{n:'Osaka (JR)', ll:[34.7025,135.4959]},
+  kyobashi:{n:'Kyobashi', ll:[34.6967,135.5340]},
+  osakajokoen:{n:'Osakajokoen', ll:[34.6887,135.5346]},
+  tsuruhashi:{n:'Tsuruhashi', ll:[34.6655,135.5300]},
+  nishikujo:{n:'Nishikujo', ll:[34.6830,135.4662]},
+  universalCity:{n:'Universal City', ll:[34.6677,135.4381]}
+};
+const stName = id => ST[id].bus ? ST[id].n : 'สถานี ' + ST[id].n;
+
+// Lines: st = stations in order, min = minutes per segment, n = stops per segment (default 1, null = unknown),
+// ends = [direction label going backward, direction label going forward]
+const LINES = {
+  midosuji:{name:'Osaka Metro สาย Midosuji', code:'M', color:'#e5171f', op:'metro',
+    st:['shinOsaka','umeda','yodoyabashi','hommachi','shinsaibashi','namba','daikokucho','dobutsuen','tennoji'],
+    min:[6,3,2,3,2,3,2,2], km:[3.5,1.3,0.9,1.0,0.9,1.2,1.2,1.0], n:[3,1,1,1,1,1,1,1], ends:['Minoh-Kayano','Nakamozu']},
+  chuo:{name:'Osaka Metro สาย Chuo', code:'C', color:'#019a66', op:'metro',
+    st:['osakako','asashiobashi','bentencho','kujo','awaza','hommachi','sakaisujiHommachi','tani4','morinomiya'],
+    min:[2,3,2,3,2,2,2,2], km:[1.5,1.6,1.3,1.5,1.1,0.7,1.0,1.3], ends:['Yumeshima / Cosmosquare','Gakken Nara-Tomigaoka']},
+  tanimachi:{name:'Osaka Metro สาย Tanimachi', code:'T', color:'#6a3aa8', op:'metro',
+    st:['higashiUmeda','minamiMorimachi','temmabashi','tani4','tani6','tani9','shitennojimae','tennoji'],
+    min:[2,3,2,2,2,2,2], km:[1.2,1.8,0.9,1.0,0.9,0.8,0.9], ends:['Dainichi','Yaominami']},
+  sennichimae:{name:'Osaka Metro สาย Sennichimae', code:'S', color:'#e44d93', op:'metro',
+    st:['namba','nippombashi','tani9'], min:[1,2], km:[0.7,1.0], ends:['Nodahanshin','Minami-Tatsumi']},
+  sakaisuji:{name:'Osaka Metro สาย Sakaisuji', code:'K', color:'#814721', op:'metro',
+    st:['sakaisujiHommachi','nagahoribashi','nippombashi','ebisucho','dobutsuen'],
+    min:[2,1,2,2], km:[1.0,0.9,1.0,0.7], ends:['Tenjimbashisuji 6-chome / Kita-Senri / Takatsuki','Tengachaya']},
+  nankai:{name:'Nankai Main Line (Local)', code:'NK', color:'#0065af', op:'nankai',
+    st:['nankaiNamba','shinImamiya','tengachaya','sumiyoshitaisha','sakai'], min:[2,2,5,6], km:[1.4,1.6,2.7,4.1], n:[1,1,3,3],
+    ends:['Namba','Wakayamashi'], tip:'ขึ้นขบวน Local (普通) เท่านั้น ขบวนด่วนไม่จอดสถานีเล็ก'},
+  nankaiAir:{name:'Nankai Airport Express', code:'NK', color:'#d9621e', op:'nankai',
+    st:['kix','sakai','tengachaya','shinImamiya','nankaiNamba'], min:[32,8,2,3], km:[33.0,6.8,1.6,1.4], n:[8,1,1,1],
+    ends:['Kansai Airport','Namba'], tip:'ขบวน Airport Express (空港急行) ไม่ต้องจ่ายค่าที่นั่งเพิ่ม'},
+  jrLoop:{name:'JR Osaka Loop Line', code:'JR', color:'#e8501f', op:'jr', loop:true,
+    st:['osaka','kyobashi','osakajokoen','morinomiya','tsuruhashi','tennoji','shinImamiya','bentencho','nishikujo'],
+    min:[8,3,2,3,6,3,9,3,6], km:[4.2,0.8,0.9,1.8,3.0,1.0,4.8,1.6,3.6], n:[3,1,1,2,3,1,4,1,3],
+    ends:['วนใน (Inner loop) ทาง Nishikujo / Tennoji','วนนอก (Outer loop) ทาง Kyobashi / Tsuruhashi']},
+  jrYume:{name:'JR Yumesaki Line', code:'JR', color:'#1d4a9c', op:'jr',
+    st:['nishikujo','universalCity'], min:[5], km:[3.2], n:[2], ends:['Nishikujo','Sakurajima']},
+  jrKyoto:{name:'JR Kyoto Line', code:'JR', color:'#0072bc', op:'jr',
+    st:['shinOsaka','osaka'], min:[4], km:[3.8], ends:['Kyoto','Osaka / Kobe']},
+  jrAir:{name:'JR Kansai Airport Rapid', code:'JR', color:'#3a8fb7', op:'jr',
+    st:['kix','tennoji','shinImamiya','bentencho','nishikujo','osaka'], min:[54,3,6,3,5], km:[46.0,1.0,4.8,1.6,3.6], n:[null,null,null,null,null],
+    ends:['Kansai Airport','Tennoji / Osaka'], tip:'ขาออกจากสนามบินขึ้นตู้ไหนก็ได้ · ขาไปสนามบินขบวนแยกที่ Hineno ให้ดูป้ายปลายทางข้างตู้'},
+  hanshin:{name:'Hanshin Namba Line', code:'HS', color:'#f08300', op:'hanshin',
+    st:['osakaNamba','kujo','nishikujo'], min:[6,2], km:[2.5,1.3], n:[3,1], ends:['Kintetsu-Nara','Amagasaki / Kobe-Sannomiya']},
+  bus60:{name:'Osaka City Bus สาย 60', code:'60', color:'#0f766e', op:'bus',
+    st:['nambaBus','tempozan'], min:[35], n:[null], ends:['Namba','Tempozan'], tip:'มีรถราว 2–3 คันต่อชั่วโมง',
+    via:{0:[[34.6590,135.4975],[34.6610,135.4700],[34.6602,135.4494]]}}
+};
+// Walking transfers between separate stations: [a, b, minutes]
+const WALKS = [
+  ['nankaiNamba','namba',7], ['nankaiNamba','osakaNamba',8], ['namba','osakaNamba',3], ['nankaiNamba','nambaBus',4],
+  ['namba','nambaBus',3], ['nankaiNamba','nippombashi',8], ['osaka','umeda',5], ['osaka','higashiUmeda',6],
+  ['umeda','higashiUmeda',6], ['shinImamiya','dobutsuen',6]
+];
+const OP = {metro:'Metro', jr:'JR', nankai:'Nankai', hanshin:'Hanshin', bus:'รถบัส'};
+// Rough distance-based fares per operator (mock: real fare tables go here later)
+const FARE = {
+  metro:k => k<=3?190 : k<=7?240 : k<=13?290 : k<=19?340 : 390,
+  jr:(k, air) => { k = Math.ceil(k - 1e-9); return (k<=3?150 : k<=6?180 : k<=10?200 : k<=15?240 : k<=20?320 : k<=25?410 : k<=30?490
+      : k<=35?580 : k<=40?660 : k<=45?750 : k<=50?840 : k<=60?960 : 1120) + (air ? 220 : 0); },
+  nankai:(k, air) => { k = Math.ceil(k - 1e-9); return (k<=3?180 : k<=7?240 : k<=11?290 : k<=15?370 : k<=19?420 : k<=23?490 : k<=27?540
+      : k<=31?610 : k<=35?650 : k<=39?690 : k<=44?740 : k<=49?790 : k<=54?850 : 880) + (air ? 230 : 0); },
+  hanshin:() => 220,
+  bus:() => 210
+};
+const CATS = {
+  all:{th:'ทั้งหมด'},
+  landmark:{th:'แลนด์มาร์ก', color:'#ff8fc0', icon:'star'},
+  temple:{th:'วัด · ศาลเจ้า', color:'#ffc766', icon:'torii'},
+  shop:{th:'ช้อปปิ้ง', color:'#b8b3ff', icon:'bag'},
+  food:{th:'ของกิน', color:'#7fe0b3', icon:'bowl'},
+  fun:{th:'สวนสนุก · พิพิธภัณฑ์', color:'#8fd6ff', icon:'wheel'}
+};
+const PASS = {metro:['Osaka Amazing Pass','Enjoy Eco Card'], none:[]};
+
+// Places: access = [nearest stationId, walk minutes, how to walk from that station]
+const PLACES = [
+ {id:'castle', th:'ปราสาทโอซาก้า', en:'Osaka Castle', jp:'大阪城', cat:'landmark', ll:[34.6873,135.5259],
+  desc:'ปราสาทสัญลักษณ์ของเมือง ล้อมด้วยสวนและคูน้ำ ขึ้นชมวิวชั้นบนสุดได้',
+  access:[['tani4',17,'ออกทางออก 9 (ฝั่งสาย Chuo) หรือ 1-B (ฝั่งสาย Tanimachi) เข้าประตู Otemon ราว 7 นาที แล้วเดินต่อถึงตัวปราสาท'],
+          ['morinomiya',17,'ออกทางออก 1 หรือ 3-B เข้าสวนปราสาทฝั่งตะวันออกเฉียงใต้'],
+          ['osakajokoen',17,'ออกจากสถานีแล้วข้ามสะพานเข้าสวนปราสาท ถึงประตู Aoya-mon ราว 10 นาที แล้วเดินต่อถึงตัวปราสาท']]},
+ {id:'dotonbori', th:'โดทงโบริ', en:'Dotonbori', jp:'道頓堀', cat:'food', ll:[34.6687,135.5013],
+  desc:'ย่านกินดื่มริมคลอง ป้ายกูลิโกะ ทาโกะยากิ ปูยักษ์',
+  access:[['namba',3,'ออกทางออก 14 เดินขึ้นเหนือถึงสะพาน Ebisubashi'],['nippombashi',7,'ออกทางออก 2 เดินไปทางตะวันตกเลียบคลอง']]},
+ {id:'kuromon', th:'ตลาดคุโรมง', en:'Kuromon Market', jp:'黒門市場', cat:'food', ll:[34.6654,135.5063],
+  desc:'ตลาดสดในร่ม ของทะเลย่าง เนื้อวากิว ผลไม้',
+  access:[['nippombashi',3,'ออกทางออก 10 ถึงปากทางตลาด']]},
+ {id:'shinsaibashi', th:'ชินไซบาชิ', en:'Shinsaibashi-suji', jp:'心斎橋筋', cat:'shop', ll:[34.6723,135.5013],
+  desc:'ถนนช้อปปิ้งมีหลังคายาวเกือบครึ่งกิโล',
+  access:[['shinsaibashi',1,'ออกทางออก 5 / 6 ข้างห้าง Daimaru ถึงอาเขตเลย'],['namba',9,'ออกทางออก 14 เดินขึ้นเหนือข้ามสะพาน Ebisubashi']]},
+ {id:'tsutenkaku', th:'หอคอยสึเทนคาคุ', en:'Tsutenkaku · Shinsekai', jp:'通天閣', cat:'landmark', ll:[34.6525,135.5063],
+  desc:'หอคอยย่านชินเซไก ถิ่นคุชิคัตสึ บรรยากาศโอซาก้ายุคเก่า',
+  access:[['ebisucho',3,'ออกทางออก 3 เดินเข้าย่านชินเซไก'],['dobutsuen',6,'ออกทางออก 1 เดินผ่านซอย Jan-Jan Yokocho'],
+          ['shinImamiya',6,'ออกทางออก Tsutenkaku-guchi (ฝั่งตะวันออก)']]},
+ {id:'umedasky', th:'อุเมดะสกายบิลดิ้ง', en:'Umeda Sky Building', jp:'梅田スカイビル', cat:'landmark', ll:[34.7053,135.4903],
+  desc:'จุดชมวิวลอยฟ้า Kuchu Teien วิวพระอาทิตย์ตกสวยมาก',
+  access:[['umeda',9,'ออกประตูตั๋วฝั่งเหนือ (North Gate) เดินผ่าน Grand Front Osaka'],['osaka',8,'ออกประตู Renrakukyo-guchi ชั้น 3 ไปทางออก Central North ลงชั้น 1 แล้วเดินเลียบ Grand Front Osaka']]},
+ {id:'usj', th:'ยูนิเวอร์แซลสตูดิโอ', en:'Universal Studios Japan', jp:'USJ', cat:'fun', ll:[34.6654,135.4323],
+  desc:'สวนสนุกใหญ่ที่สุดของโอซาก้า ควรไปถึงก่อนประตูเปิด',
+  access:[['universalCity',6,'เดินผ่าน Universal CityWalk ถึงประตูทางเข้า']]},
+ {id:'kaiyukan', th:'พิพิธภัณฑ์สัตว์น้ำไคยูคัง', en:'Osaka Aquarium Kaiyukan', jp:'海遊館', cat:'fun', ll:[34.6545,135.4290],
+  desc:'อควาเรียมขนาดใหญ่ มีฉลามวาฬ อยู่ติดชิงช้าสวรรค์เทมโปซัง',
+  access:[['osakako',5,'ออกทางออก 1 เดินตรงไปทางชิงช้าสวรรค์'],['tempozan',3,'ลงป้าย Tempozan Harbor Village (ก่อนสุดสาย 1 ป้าย) เดินถึงหน้าอควาเรียม']]},
+ {id:'shitennoji', th:'วัดชิเทนโนจิ', en:'Shitennoji Temple', jp:'四天王寺', cat:'temple', ll:[34.6534,135.5165],
+  desc:'หนึ่งในวัดพุทธเก่าแก่ที่สุดของญี่ปุ่น เจดีย์ห้าชั้น',
+  access:[['shitennojimae',5,'ออกทางออก 4 เดินลงใต้'],['tennoji',13,'ออกฝั่งเหนือ เดินตรงขึ้นไปตามถนน Tanimachi-suji']]},
+ {id:'sumiyoshi', th:'ศาลเจ้าสุมิโยชิ ไทฉะ', en:'Sumiyoshi Taisha', jp:'住吉大社', cat:'temple', ll:[34.6125,135.4930],
+  desc:'ศาลเจ้าเก่าแก่ สะพานโค้งสีแดง Sorihashi',
+  access:[['sumiyoshitaisha',3,'เดินไปทางตะวันออกราว 3 นาทีถึงศาลเจ้า']]},
+ {id:'harukas', th:'อาเบโนะ ฮารุคัส', en:'Abeno Harukas', jp:'あべのハルカス', cat:'shop', ll:[34.6459,135.5139],
+  desc:'ตึกสูง 300 เมตร ห้าง Kintetsu และจุดชมวิว Harukas 300',
+  access:[['tennoji',3,'ตึกเชื่อมกับสถานีโดยตรง · JR ออกประตู Central Gate · Midosuji ออกฝั่งประตูตะวันตก']]}
+];
+
+/* ================= ROUTING ================= */
+const walk = (text,min,path,tip) => ({t:'walk',text,min,path,tip});
+const hav = (a,b) => { const R=6371,r=Math.PI/180,dLa=(b[0]-a[0])*r,dLo=(b[1]-a[1])*r;
+  const h=Math.sin(dLa/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
+const segKm = path => path.slice(1).reduce((s,p,i) => s + hav(path[i],p), 0) * 1.1;
+
+// Build the network graph once
+const ADJ = {};
+const addEdge = (a,e) => (ADJ[a] = ADJ[a] || []).push(e);
+for(const [id,L] of Object.entries(LINES)){
+  const N = L.st.length, segs = L.loop ? N : N-1;
+  for(let i=0;i<segs;i++){
+    const a = L.st[i], b = L.st[(i+1)%N], via = (L.via && L.via[i]) || [], n = L.n ? L.n[i] : 1;
+    const path = [ST[a].ll, ...via, ST[b].ll], dkm = L.km ? L.km[i] : segKm(path);
+    addEdge(a, {to:b, line:id, min:L.min[i], n, km:dkm, dir:L.ends[1], path});
+    addEdge(b, {to:a, line:id, min:L.min[i], n, km:dkm, dir:L.ends[0], path:[...path].reverse()});
+  }
+}
+WALKS.forEach(([a,b,m]) => {
+  addEdge(a, {to:b, walk:true, min:m, path:[ST[a].ll, ST[b].ll]});
+  addEdge(b, {to:a, walk:true, min:m, path:[ST[b].ll, ST[a].ll]});
+});
+
+// Shortest-time route over the network (Dijkstra on station+line states). ban = lines to avoid.
+function railRoute(origin, place, ban = {}){
+  const dist = {}, prev = {}, done = {}, open = [], key = (s,l) => s + '|' + l;
+  origin.access.forEach(([s,m,tip]) => { const k = key(s,'start'); dist[k] = m; prev[k] = {start:true, s, m, tip}; open.push(k); });
+  const goal = {}; place.access.forEach(a => goal[a[0]] = a);
+  const fromSt = {}; origin.access.forEach(a => fromSt[a[0]] = 1);   // stations you can already walk to are not a ride
+  const opOf = l => LINES[l] && LINES[l].op;
+  let best = null;
+  while(open.length){
+    let bi = 0; for(let i=1;i<open.length;i++) if(dist[open[i]] < dist[open[bi]]) bi = i;
+    const k = open.splice(bi,1)[0]; if(done[k]) continue; done[k] = 1;
+    if(best && dist[k] >= best.tot) break;
+    const [s,l] = k.split('|');
+    if(goal[s] && !fromSt[s] && l !== 'start' && l !== 'walk'){ const tot = dist[k] + goal[s][1]; if(!best || tot < best.tot) best = {k, tot, acc:goal[s]}; }
+    for(const e of ADJ[s] || []){
+      let nk, c;
+      if(e.walk){ if(l === 'walk' || l === 'start') continue; nk = key(e.to,'walk'); c = dist[k] + e.min; }
+      else { if(ban[e.line]) continue; nk = key(e.to,e.line);
+        // boarding 2-3 min, same-operator transfer 4, changing operator (exit gates, new ticket) 7
+        c = dist[k] + e.min + (l === e.line ? 0 : l === 'start' ? 2 : l === 'walk' ? 3 : opOf(l) === opOf(e.line) ? 4 : 7); }
+      if(dist[nk] === undefined || c < dist[nk]){ dist[nk] = c; prev[nk] = {from:k, e}; open.push(nk); }
+    }
+  }
+  if(!best) return null;
+
+  const edges = []; let k = best.k, p;
+  while(!(p = prev[k]).start){ edges.unshift(p.e); k = p.from; }
+  const steps = []; let cur = p.s;
+  if(p.m > 0) steps.push(walk('เดินไป' + stName(p.s), p.m, [origin.ll, ST[p.s].ll], p.tip));
+  for(const e of edges){
+    const last = steps[steps.length-1];
+    if(e.walk) steps.push(walk('เดินเปลี่ยนไป' + stName(e.to), e.min, e.path));
+    else if(last && last.t === 'ride' && last.line === e.line){
+      last.to = ST[e.to].n; last.min += e.min; last.km += e.km; last.path.push(...e.path.slice(1));
+      last.stops = (last.stops == null || e.n == null) ? null : last.stops + e.n;
+    } else {
+      const L = LINES[e.line], d = e.dir.startsWith('วน') ? e.dir : 'ขบวนไป ' + e.dir;
+      steps.push({t:'ride', line:e.line, from:ST[cur].n, to:ST[e.to].n, stops:e.n, min:e.min, km:e.km,
+        dir: d + (L.tip ? ' · ' + L.tip : ''), path:[...e.path]});
+    }
+    cur = e.to;
+  }
+  steps.push(walk(best.acc[2] || 'เดินไป' + place.th, best.acc[1], [ST[cur].ll, place.ll]));
+
+  // fare: consecutive rides on the same operator share one ticket
+  const rides = steps.filter(s => s.t === 'ride'); let yen = 0, i = 0;
+  if(rides.some(s => s.from === s.to)) return null;   // out-and-back detour, not a real route
+  while(i < rides.length){ const op = LINES[rides[i].line].op; let kmSum = 0, air = false;
+    while(i < rides.length && LINES[rides[i].line].op === op){ const r = rides[i++]; kmSum += r.km;
+      air = air || r.from === ST.kix.n || r.to === ST.kix.n; }
+    yen += FARE[op](kmSum, air); }
+  const ops = [...new Set(rides.map(s => LINES[s.line].op))];
+  const hasBus = ops.includes('bus');
+  return {mode: hasBus ? 'bus' : 'train',
+    title: ops.length === 1 ? (hasBus ? 'รถประจำทาง' : ops[0] === 'metro' ? 'รถไฟใต้ดิน' : 'รถไฟ ' + OP[ops[0]]) : ops.map(o => OP[o]).join(' + '),
+    min: Math.round(best.tot), yen, steps, lines: rides.map(s => s.line),
+    pass: ops.every(o => o === 'metro' || o === 'bus') ? PASS.metro : PASS.none};
+}
+
+// All the ways to get from the current origin to a place
+const memo = {};
+function routesFor(p){
+  const mk = ORIGIN.id + '>' + p.id; if(memo[mk]) return memo[mk];
+  const d = hav(ORIGIN.ll, p.ll), seen = {}; let out = [];
+  const push = r => { const sig = r.steps.filter(s => s.t === 'ride').map(s => LINES[s.line].op + s.from + s.to).join('>');
+    if(!seen[sig]){ seen[sig] = 1; out.push(r); } };
+  const nTransfer = r => r.lines.length - 1;
+  const best = railRoute(ORIGIN, p);
+  if(best){
+    push(best);
+    // alternatives: avoid each line of the best route, then each whole operator
+    const bans = best.lines.map(l => ({[l]:1}));
+    new Set(best.lines.map(l => LINES[l].op)).forEach(op =>
+      bans.push(Object.fromEntries(Object.keys(LINES).filter(l => LINES[l].op === op).map(l => [l,1]))));
+    // ...and single-operator options (one ticket, pass-friendly)
+    ['metro','jr','nankai'].forEach(op =>
+      bans.push(Object.fromEntries(Object.keys(LINES).filter(l => LINES[l].op !== op).map(l => [l,1]))));
+    bans.map(b => railRoute(ORIGIN, p, b)).filter(a => a && a.min <= best.min*1.4 + 8).forEach(push);
+    // recommend by time, with a small penalty per transfer and per ¥100, so a near-tie goes to the simpler route
+    const score = r => r.min + 3*nTransfer(r) + r.yen/100;
+    out.sort((a,b) => score(a) - score(b));
+    const direct = out.find(r => r.mode === 'bus' && r.lines.length === 1);   // always keep a direct bus as an option
+    out = out.slice(0, 3); if(direct && !out.includes(direct)) out[out.length - 1] = direct;
+    out.forEach((r,i) => r.tag = i === 0 ? 'แนะนำ' : r.min < out[0].min ? 'เร็วกว่า'
+      : nTransfer(r) === 0 && nTransfer(out[0]) > 0 ? 'ไม่ต้องต่อ' : r.yen < out[0].yen ? 'ถูกกว่า' : null);
+  }
+  const top = out[0];
+  if(d <= 2.6){
+    const wk = +(d*1.25).toFixed(1), w = {mode:'walk', title:'เดิน', min:Math.max(1, Math.round(d*15)), yen:0, km:wk,
+      steps:[walk(`เดินจาก ${ORIGIN.th} · ${wk} กม.`, Math.max(1, Math.round(d*15)), [ORIGIN.ll, p.ll])]};
+    if(w.min <= 12){ w.tag = 'ใกล้มาก'; out = [w]; }          // too close to bother riding
+    else if(!top || w.min <= top.min){ w.tag = 'แนะนำ'; if(top) top.tag = null; out.unshift(w); }
+    else out.push(w);
+  }
+  if(d > 0.8 && d <= 20){
+    const road = d*1.35, min = Math.round(road*3 + 4);
+    out.push({mode:'taxi', title:'แท็กซี่', min, yenText:'~¥' + (Math.round((600 + Math.ceil(Math.max(0, road - 1.2)/0.231)*100)*1.1/100)*100).toLocaleString('en-US'),
+      steps:[{t:'taxi', text:'ขึ้นแท็กซี่จาก ' + ORIGIN.th, min, path:[ORIGIN.ll, p.ll], tip:'ราคาประมาณ ขึ้นกับการจราจร · คุ้มถ้าไปกัน 3–4 คน'}]});
+  }
+  return memo[mk] = out;
+}
+
+/* ================= ICONS ================= */
+const ICON = {
+  star:'<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9L3.5 9.7l5.9-.8z"/>',
+  torii:'<path d="M3 6c6 1.5 12 1.5 18 0M5 10h14M7.5 7v13M16.500 7v13"/>',
+  bag:'<path d="M5.500 8h13l-1 12h-11zM9 8V6.500a3 3 0 016 0V8"/>',
+  bowl:'<path d="M3.500 11h17a8.500 8 0 01-17 0zM9 3.500v4M13.500 3.500v4"/>',
+  wheel:'<circle cx="12" cy="11" r="7.500"/><path d="M12 3.500v15M4.500 11h15M8 21l4-10 4 10"/>',
+  train:'<rect x="5.500" y="3.500" width="13" height="13" rx="2.500"/><path d="M5.500 10.500h13M9 20.500l1.500-4M15 20.500l-1.500-4M9 13.500h.01M15 13.500h.01"/>',
+  bus:'<rect x="4.500" y="4" width="15" height="13" rx="2.500"/><path d="M4.500 11h15M8 17v3M16 17v3M8 14h.01M16 14h.01"/>',
+  walk:'<circle cx="12.500" cy="4.500" r="1.800"/><path d="M12 8.500l-3.500 2.500v3.500M12 8.500l2 4.500 3.500 1.500M12 8.500l-1 6.500-2.500 5.500M11.500 14l3 3 .5 4"/>',
+  taxi:'<path d="M5 11l2-5.500h10l2 5.500M3.500 11h17v6.500h-17zM7 17.500v2.500M17 17.500v2.500M10 3h4M7.500 14h.01M16.500 14h.01"/>'
+};
+const svg = n => `<svg viewBox="0 0 24 24" fill="none" stroke="#1d1a4a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${ICON[n]}</svg>`;
+const badge = l => `<span class="badge" style="--c:${LINES[l].color}">${LINES[l].code}</span>`;
+
+/* ================= STATE ================= */
+const state = {cat:'all', place:null, route:0};
+const $ = id => document.getElementById(id);
+const isMobile = () => innerWidth <= 720;
+const byId = id => PLACES.find(p => p.id === id);
+const km = hav;
+const price = r => r.yenText || (r.yen ? '¥'+r.yen.toLocaleString('en-US') : 'ฟรี');
+const transfers = r => Math.max(0, r.steps.filter(s => s.t==='ride').length - 1);
+const walkMin = r => r.steps.filter(s => s.t==='walk').reduce((a,s) => a+s.min, 0);
+const modeIcon = {train:'train', bus:'bus', walk:'walk', taxi:'taxi'};
+const modeTh = {train:'รถไฟ', bus:'รถบัส', walk:'เดิน', taxi:'แท็กซี่'};
+
+/* ================= MAP ================= */
+const map = L.map('map', {zoomControl:false}).setView([34.668,135.49], 13);
+L.control.zoom({position:'bottomright'}).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom:19, attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+const routeLayer = L.layerGroup().addTo(map);
+
+const hereMarker = L.marker(ORIGIN.ll, {zIndexOffset:900, interactive:false,
+  icon:L.divIcon({className:'', html:'<div class="here"><span>คุณอยู่ที่นี่</span></div>', iconSize:[22,22], iconAnchor:[11,11]})}).addTo(map);
+
+const pinIcon = (p, cls='') => L.divIcon({className:'', iconSize:[36,36], iconAnchor:[18,18],
+  html:`<div class="pin ${cls}" style="--c:${CATS[p.cat].color}">${svg(CATS[p.cat].icon)}<span>${p.th}</span></div>`});
+const markers = {};
+PLACES.forEach(p => {
+  markers[p.id] = L.marker(p.ll, {icon:pinIcon(p), title:p.th}).addTo(map).on('click', () => selectPlace(p.id));
+});
+map.on('click', () => { closeMenus(); });
+
+function pad(){ return isMobile()
+  ? {paddingTopLeft:[30,130], paddingBottomRight:[30, innerHeight*0.46+20]}
+  : {paddingTopLeft:[460,60], paddingBottomRight:[60,60]}; }
+
+function syncMarkers(){
+  PLACES.forEach(p => {
+    const sel = state.place === p.id;
+    const dim = !sel && (state.place ? true : state.cat!=='all' && p.cat!==state.cat);
+    markers[p.id].setIcon(pinIcon(p, sel ? 'sel' : dim ? 'dim' : '')).setZIndexOffset(sel ? 800 : 0);
+  });
+}
+
+function drawRoute(){
+  routeLayer.clearLayers();
+  if(!state.place){ return; }
+  const r = routesFor(byId(state.place))[state.route], pts = [];
+  r.steps.forEach(s => {
+    if(!s.path) return;
+    pts.push(...s.path);
+    const soft = s.t !== 'ride';
+    L.polyline(s.path, {color:'#1d1a4a', weight: soft ? 0 : 10, lineCap:'round'}).addTo(routeLayer);
+    L.polyline(s.path, {color: soft ? '#1d1a4a' : LINES[s.line].color, weight: soft ? 4 : 6,
+      dashArray: soft ? '2 9' : null, lineCap:'round'}).addTo(routeLayer);
+    if(s.t === 'ride'){
+      [[s.path[0], s.from], [s.path[s.path.length-1], s.to]].forEach(([ll,name]) =>
+        L.marker(ll, {icon:L.divIcon({className:'', html:'<div class="stn"></div>', iconSize:[14,14], iconAnchor:[7,7]}), interactive:false})
+          .bindTooltip(name, {permanent:true, direction:'top', offset:[0,-6], className:'stn-tip'}).addTo(routeLayer));
+    }
+  });
+  map.invalidateSize();
+  map.fitBounds(L.latLngBounds(pts), {...pad(), maxZoom:16});
+}
+
+/* ================= UI RENDER ================= */
+function renderChips(){
+  $('chips').innerHTML = Object.entries(CATS).map(([k,c]) =>
+    `<button class="pill ${state.cat===k?'on':''}" data-cat="${k}">${c.color?`<i style="--c:${c.color}"></i>`:''}${c.th}</button>`).join('');
+}
+
+function renderPanel(){
+  const el = $('panel');
+  if(!state.place){
+    const list = PLACES.filter(p => state.cat==='all' || p.cat===state.cat)
+      .sort((a,b) => km(ORIGIN.ll,a.ll) - km(ORIGIN.ll,b.ll));
+    el.innerHTML = `<div class="sec"><h2>จาก ${ORIGIN.th} ไปไหนดี</h2>
+      <p class="hint">จิ้มหมุดบนแผนที่ หรือเลือกจากรายการ · เรียงจากใกล้ไปไกล</p></div>
+      <div class="sec" style="padding:8px">${list.map(p => { const r = routesFor(p)[0]; return `
+        <button class="place" data-place="${p.id}">
+          <span class="bub" style="--c:${CATS[p.cat].color}">${svg(CATS[p.cat].icon)}</span>
+          <span><span class="nm">${p.th}</span><br><span class="sb">${p.en} · ${p.jp}</span></span>
+          <span class="rt"><b>${r.min} นาที</b><span>${modeTh[r.mode]} · ${price(r)}</span></span>
+        </button>`; }).join('')}</div>`;
+    return;
+  }
+  const p = byId(state.place), rs = routesFor(p);
+  el.innerHTML = `<div class="sec">
+      <button class="back" data-back>‹ สถานที่ทั้งหมด</button>
+      <h1 class="title">${p.th}</h1>
+      <div class="names">${p.en} · ${p.jp} · ห่าง ${km(ORIGIN.ll,p.ll).toFixed(1)} กม.</div>
+      <p class="desc">${p.desc}</p>
+    </div>
+    <div class="sec">
+      <h2>ไปยังไงได้บ้าง <span style="color:var(--mute);font-weight:600">${rs.length} วิธี</span></h2>
+      <div class="fromto"><b>${ORIGIN.th}</b> → <b>${p.th}</b></div>
+      ${rs.map((r,i) => routeCard(r,i,p)).join('')}
+      <p class="note">ค่าโดยสารและระยะทางตรวจกับตารางของผู้ให้บริการแล้ว (พ.ย. 2026) · เวลาเดินทางเป็นค่าโดยประมาณ ไม่รวมเวลารอรถ</p>
+    </div>`;
+  el.scrollTop = 0;
+}
+
+function routeCard(r, i, p){
+  const open = i === state.route;
+  const rides = r.steps.filter(s => s.t==='ride');
+  const chain = rides.length ? `<span class="chain">${rides.map(s => badge(s.line)).join('<i>›</i>')}</span><span class="sep">·</span>` : '';
+  const bits = [`<span class="price">${price(r)}</span>`];
+  if(rides.length) bits.push(transfers(r) ? `ต่อ ${transfers(r)} ครั้ง` : 'ไม่ต้องต่อ', `เดินรวม ${walkMin(r)} นาที`);
+  if(r.km) bits.push(`${r.km} กม.`);
+  const pass = r.pass ? (r.pass.length ? r.pass.map(x => `<span class="pass">✓ ${x}</span>`).join('')
+                                       : '<span class="pass no">✕ Enjoy Eco Card ใช้ไม่ได้</span>') : '';
+  return `<div class="route ${open?'open':''}">
+    <button class="route-head" data-route="${i}" aria-expanded="${open}">
+      <div class="r1"><span class="mode">${svg(modeIcon[r.mode])}</span><span class="ttl">${r.title}</span>
+        ${r.tag?`<span class="tag">${r.tag}</span>`:''}<span class="time">${r.min} <small>นาที</small></span></div>
+      <div class="r2">${chain}${bits.join('<span class="sep">·</span>')}</div>
+      ${pass?`<div class="r2">${pass}</div>`:''}
+    </button>
+    ${open ? `<div class="steps">${r.steps.map(stepRow).join('')}
+      <div class="step end"><div class="lane"><span class="node"></span></div>
+        <div class="body"><div class="hd">ถึง ${p.th}</div></div></div></div>` : ''}
+  </div>`;
+}
+
+function stepRow(s){
+  if(s.t === 'ride'){
+    const L_ = LINES[s.line];
+    return `<div class="step ride" style="--c:${L_.color}"><div class="lane"><span class="node"></span><span class="bar"></span></div>
+      <div class="body"><div class="hd">${badge(s.line)} ${L_.name}</div>
+        <div class="meta">${s.from} → <b style="color:var(--ink)">${s.to}</b> · ${s.stops?s.stops+' สถานี · ':''}${s.min} นาที</div>
+        <span class="tip">${s.dir}</span></div></div>`;
+  }
+  return `<div class="step ${s.t}"><div class="lane"><span class="node"></span><span class="bar"></span></div>
+    <div class="body"><div class="hd">${s.text}</div><div class="meta">${s.t==='taxi'?'นั่ง':'เดิน'} ${s.min} นาที</div>
+      ${s.tip?`<span class="tip">${s.tip}</span>`:''}</div></div>`;
+}
+
+/* ================= ACTIONS ================= */
+function selectPlace(id){
+  state.place = id; state.route = 0;
+  const p = byId(id);
+  $('q').value = p.th; $('search').classList.add('has-q');
+  closeMenus(); syncMarkers(); renderPanel(); drawRoute();
+}
+function clearPlace(){
+  state.place = null; $('q').value = ''; $('search').classList.remove('has-q');
+  syncMarkers(); renderPanel(); drawRoute(); fitAll();
+}
+function fitAll(){
+  const ps = PLACES.filter(p => state.cat==='all' || p.cat===state.cat).map(p => p.ll);
+  map.invalidateSize();
+  const far = ps.every(ll => hav(ORIGIN.ll, ll) > 15);
+  map.fitBounds(L.latLngBounds(far ? ps : [ORIGIN.ll, ...ps]), {...pad(), maxZoom:15});
+}
+function closeMenus(){
+  $('suggest').classList.remove('open'); $('originMenu').classList.remove('open');
+  $('originBtn').setAttribute('aria-expanded','false');
+}
+function suggest(){
+  const t = $('q').value.trim().toLowerCase();
+  const hits = PLACES.filter(p => !t || [p.th,p.en,p.jp].some(n => n.toLowerCase().includes(t)));
+  $('suggest').innerHTML = hits.length ? hits.map(p => `<li data-place="${p.id}">
+      <span class="bub" style="--c:${CATS[p.cat].color};width:30px;height:30px">${svg(CATS[p.cat].icon)}</span>
+      <span>${p.th}<span class="sub">${p.en} · ${p.jp}</span></span><em>${CATS[p.cat].th}</em></li>`).join('')
+    : '<li class="empty">ยังไม่มีสถานที่นี้ในระบบ</li>';
+  $('originMenu').classList.remove('open');
+  $('suggest').classList.add('open');
+}
+
+$('q').addEventListener('focus', () => { $('q').select(); suggest(); });
+$('q').addEventListener('input', () => { $('search').classList.toggle('has-q', !!$('q').value); suggest(); });
+$('q').addEventListener('keydown', e => {
+  if(e.key === 'Enter'){ const li = $('suggest').querySelector('li[data-place]'); if(li) selectPlace(li.dataset.place); $('q').blur(); }
+  if(e.key === 'Escape'){ closeMenus(); $('q').blur(); }
+});
+$('clear').addEventListener('click', e => { e.preventDefault(); clearPlace(); });
+$('suggest').addEventListener('mousedown', e => { const li = e.target.closest('li[data-place]'); if(li){ e.preventDefault(); selectPlace(li.dataset.place); $('q').blur(); } });
+$('originBtn').addEventListener('click', () => {
+  const m = $('originMenu'), open = !m.classList.contains('open');
+  closeMenus(); m.classList.toggle('open', open); $('originBtn').setAttribute('aria-expanded', open);
+});
+function renderOrigins(){
+  $('originName').textContent = ORIGIN.th;
+  $('originMenu').innerHTML = ORIGINS.map(o => `<li class="${o===ORIGIN?'hl':''}" data-origin="${o.id}"><span class="dot"></span>${o.th}${o===ORIGIN?'<em>เลือกอยู่</em>':''}</li>`).join('');
+}
+function setOrigin(id){
+  ORIGIN = ORIGINS.find(o => o.id === id); state.route = 0;
+  hereMarker.setLatLng(ORIGIN.ll);
+  closeMenus(); renderOrigins(); renderPanel();
+  if(state.place) drawRoute(); else fitAll();
+}
+$('originMenu').addEventListener('click', e => { const li = e.target.closest('[data-origin]'); if(li) setOrigin(li.dataset.origin); });
+renderOrigins();
+$('chips').addEventListener('click', e => {
+  const b = e.target.closest('[data-cat]'); if(!b) return;
+  state.cat = b.dataset.cat; renderChips();
+  if(state.place) clearPlace(); else { syncMarkers(); renderPanel(); fitAll(); }
+});
+$('panel').addEventListener('click', e => {
+  const pl = e.target.closest('[data-place]'), rt = e.target.closest('[data-route]');
+  if(pl) selectPlace(pl.dataset.place);
+  else if(rt){ state.route = +rt.dataset.route; const top = $('panel').scrollTop; renderPanel(); $('panel').scrollTop = top; drawRoute(); }
+  else if(e.target.closest('[data-back]')) clearPlace();
+});
+document.addEventListener('mousedown', e => { if(!e.target.closest('#search')) closeMenus(); });
+
+renderChips(); renderPanel(); syncMarkers(); fitAll();
+</script>
+</body>
+</html>
