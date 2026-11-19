@@ -224,6 +224,7 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left;-webkit
 
 /* ---------- passes page ---------- */
 .pass-fab{position:fixed;top:16px;right:16px;z-index:1001;display:flex;align-items:center;gap:8px;height:46px;padding:0 18px 0 12px;background:#fff;border:var(--bw) solid var(--ink);border-radius:999px;box-shadow:var(--sh);font-size:14.5px;font-weight:800;white-space:nowrap;transition:opacity .2s,transform .25s var(--spring)}
+html.suggesting .pass-fab{opacity:0;pointer-events:none}
 .pass-fab:hover{transform:translateY(-1px) rotate(-1.5deg)}
 .pass-fab svg{flex:none;width:24px;height:24px}
 .ico{flex:none;width:34px;height:34px;border-radius:50%;background:var(--chip);display:grid;place-items:center}
@@ -359,6 +360,7 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left;-webkit
   <div class="vnav"><button class="vbtn" id="vPrev">‹</button><div class="vdots" id="vDots"></div><button class="vbtn" id="vNext">›</button></div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data/osaka-network.js"></script>
 <script>
 /* ================= I18N ================= */
 const LANGS = [['th','ไทย'], ['en','EN'], ['ja','日本語']];
@@ -551,6 +553,7 @@ const FARE = {
   bus:() => 210
 };
 const CATS = {
+  station:{name:X('สถานี','Station','駅'), color:'#e4e2f7', icon:'train', hidden:true},
   all:{name:X('ทั้งหมด','All','すべて')},
   landmark:{name:X('แลนด์มาร์ก','Landmarks','名所'), color:'#ff8fc0', icon:'star'},
   temple:{name:X('วัด · ศาลเจ้า','Temples & shrines','寺・神社'), color:'#ffc766', icon:'torii'},
@@ -608,12 +611,75 @@ const PLACES = [
 const pn = p => tr(p.name);
 const pSub = p => (LANG === 'th' ? [p.name.en, p.name.ja] : LANG === 'en' ? [p.name.ja] : [p.name.en]).join(' · ');
 
+/* ================= NETWORK LAYER (OpenStreetMap, data/osaka-network.js) ================= */
+// The generated file gives every Osaka Metro station and line in order. Hand-checked values in this file win:
+// station names, minutes and track km we verified are spread over the generated segments they cover.
+const NET = (window.NETWORK || {}).osaka;
+const NEW_LINES = {
+  yotsubashi:{name:X('Osaka Metro สาย Yotsubashi','Osaka Metro Yotsubashi Line','Osaka Metro 四つ橋線'), code:'Y'},
+  nagahori:{name:X('Osaka Metro สาย Nagahori Tsurumi-ryokuchi','Osaka Metro Nagahori Tsurumi-ryokuchi Line','Osaka Metro 長堀鶴見緑地線'), code:'N'},
+  imazatosuji:{name:X('Osaka Metro สาย Imazatosuji','Osaka Metro Imazatosuji Line','Osaka Metro 今里筋線'), code:'I'}
+};
+const estMin = km => Math.max(1, Math.round(.6 + 1.5 * km));   // subway: ~1.5 min per km + dwell
+function mergeNetwork(){
+  if(!NET) return;
+  for(const [sid, s] of Object.entries(NET.stations)){
+    if(ST[sid]) ST[sid].ll = s.ll;                     // OSM position is more exact than the hand one
+    else ST[sid] = {n:s.n, ja:s.ja, ll:s.ll};
+  }
+  for(const [id, g] of Object.entries(NET.lines)){
+    const old = LINES[id], km = g.km.slice(), min = km.map(estMin);
+    if(old && old.st){
+      // spread each hand-checked segment (which may skip stations) over the generated ones it covers
+      old.st.slice(1).forEach((b, i) => {
+        let ia = g.st.indexOf(old.st[i]), ib = g.st.indexOf(b);
+        if(ia < 0 || ib < 0) return;
+        if(ia > ib) [ia, ib] = [ib, ia];
+        const span = km.slice(ia, ib), tot = span.reduce((a, x) => a + x, 0) || 1;
+        const hk = old.km ? old.km[i] : tot, hm = old.min[i];
+        let left = hm;
+        for(let k = ia; k < ib; k++){
+          km[k] = Math.round(span[k - ia] / tot * hk * 100) / 100;
+          const m = k === ib - 1 ? left : Math.max(1, Math.round(span[k - ia] / tot * hm));
+          min[k] = Math.max(1, m); left -= min[k];
+        }
+      });
+      Object.assign(old, {st:g.st, km, min}); delete old.n;   // every generated segment is one stop
+    } else {
+      const a = NET.stations[g.st[0]], z = NET.stations[g.st[g.st.length - 1]];
+      LINES[id] = {...NEW_LINES[id], code:(NEW_LINES[id] || {}).code || g.ref || id, color:g.colour || '#8580b0', op:'metro',
+        name:(NEW_LINES[id] || {}).name || X(id, id, id), st:g.st, km, min, ends:[E(a.n, a.ja), E(z.n, z.ja)]};
+    }
+  }
+  // walking links between separate stations less than ~450 m apart (hand-written WALKS keep their minutes)
+  const have = new Set(WALKS.map(([a, b]) => [a, b].sort().join('|')));
+  const ids = Object.keys(ST).filter(s => !ST[s].bus);
+  for(let i = 0; i < ids.length; i++) for(let j = i + 1; j < ids.length; j++){
+    const a = ids[i], b = ids[j], d = hav(ST[a].ll, ST[b].ll);
+    if(d > .45 || have.has([a, b].sort().join('|'))) continue;
+    WALKS.push([a, b, Math.ceil(d * 1.3 * 1000 / 80) + 2]);
+  }
+}
+
 /* ================= ROUTING ================= */
+class Heap{
+  constructor(){ this.a = []; }
+  get size(){ return this.a.length; }
+  push(p, v){ const a = this.a; a.push([p, v]); let i = a.length - 1;
+    while(i){ const j = (i - 1) >> 1; if(a[j][0] <= a[i][0]) break; [a[i], a[j]] = [a[j], a[i]]; i = j; } }
+  pop(){ const a = this.a, top = a[0], last = a.pop();
+    if(a.length){ a[0] = last; let i = 0;
+      for(;;){ const l = 2 * i + 1, r = l + 1; let m = i;
+        if(l < a.length && a[l][0] < a[m][0]) m = l; if(r < a.length && a[r][0] < a[m][0]) m = r;
+        if(m === i) break; [a[i], a[m]] = [a[m], a[i]]; i = m; } }
+    return top; }
+}
 // Steps keep ids and translatable values; text is resolved when rendering, so switching language needs no recompute.
 const hav = (a,b) => { const R=6371,r=Math.PI/180,dLa=(b[0]-a[0])*r,dLo=(b[1]-a[1])*r;
   const h=Math.sin(dLa/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
 const segKm = path => path.slice(1).reduce((s,p,i) => s + hav(path[i],p), 0) * 1.1;
 
+mergeNetwork();
 // Build the network graph once
 const ADJ = {};
 const addEdge = (a,e) => (ADJ[a] = ADJ[a] || []).push(e);
@@ -633,15 +699,14 @@ WALKS.forEach(([a,b,m]) => {
 
 // Shortest-time route over the network (Dijkstra on station+line states). ban = lines to avoid.
 function railRoute(origin, place, ban = {}){
-  const dist = {}, prev = {}, done = {}, open = [], key = (s,l) => s + '|' + l;
-  origin.access.forEach(([s,m,tip]) => { const k = key(s,'start'); dist[k] = m; prev[k] = {start:true, s, m, tip}; open.push(k); });
+  const dist = {}, prev = {}, done = {}, open = new Heap(), key = (s,l) => s + '|' + l;
+  origin.access.forEach(([s,m,tip]) => { const k = key(s,'start'); dist[k] = m; prev[k] = {start:true, s, m, tip}; open.push(m, k); });
   const goal = {}; place.access.forEach(a => goal[a[0]] = a);
   const fromSt = {}; origin.access.forEach(a => fromSt[a[0]] = 1);   // stations you can already walk to are not a ride
   const opOf = l => LINES[l] && LINES[l].op;
   let best = null;
-  while(open.length){
-    let bi = 0; for(let i=1;i<open.length;i++) if(dist[open[i]] < dist[open[bi]]) bi = i;
-    const k = open.splice(bi,1)[0]; if(done[k]) continue; done[k] = 1;
+  while(open.size){
+    const k = open.pop()[1]; if(done[k]) continue; done[k] = 1;
     if(best && dist[k] >= best.tot) break;
     const [s,l] = k.split('|');
     if(goal[s] && !fromSt[s] && l !== 'start' && l !== 'walk'){ const tot = dist[k] + goal[s][1]; if(!best || tot < best.tot) best = {k, tot, acc:goal[s]}; }
@@ -651,7 +716,7 @@ function railRoute(origin, place, ban = {}){
       else { if(ban[e.line]) continue; nk = key(e.to,e.line);
         // boarding 2-3 min, same-operator transfer 4, changing operator (exit gates, new ticket) 7
         c = dist[k] + e.min + (l === e.line ? 0 : l === 'start' ? 2 : l === 'walk' ? 3 : opOf(l) === opOf(e.line) ? 4 : 7); }
-      if(dist[nk] === undefined || c < dist[nk]){ dist[nk] = c; prev[nk] = {from:k, e}; open.push(nk); }
+      if(dist[nk] === undefined || c < dist[nk]){ dist[nk] = c; prev[nk] = {from:k, e}; open.push(c, nk); }
     }
   }
   if(!best) return null;
@@ -669,7 +734,7 @@ function railRoute(origin, place, ban = {}){
     } else steps.push({t:'ride', line:e.line, from:cur, to:e.to, stops:e.n, min:e.min, km:e.km, dir:e.dir, path:[...e.path]});
     cur = e.to;
   }
-  steps.push({t:'walk', kind:'last', text:best.acc[2], place, st:cur, min:best.acc[1], path:[ST[cur].ll, place.ll]});
+  if(best.acc[1] > 0) steps.push({t:'walk', kind:'last', text:best.acc[2], place, st:cur, min:best.acc[1], path:[ST[cur].ll, place.ll]});
 
   // fare: consecutive rides on the same operator share one ticket
   const rides = steps.filter(s => s.t === 'ride'); let yen = 0, i = 0;
@@ -1200,7 +1265,7 @@ Object.assign(UI.ja, {passesTitle:'きっぷ・パス', passesBtn:'パス', plan
 const yen = n => '¥' + n.toLocaleString('en-US');
 function renderPasses(focus){
   const T = planTrip();
-  const chips = PLACES.map(p => { const k = plan.ids.indexOf(p.id);
+  const chips = PLACES.filter(p => p.cat !== 'station').map(p => { const k = plan.ids.indexOf(p.id);
     return `<button class="pill ${k >= 0 ? 'on' : ''}" data-plan="${p.id}">${k >= 0 ? `<b class="ord">${k + 1}</b>` : `<i style="--c:${CATS[p.cat].color}"></i>`}${pn(p)}</button>`; }).join('');
   const result = !T ? '' : `<div class="trip">
       <ol class="legs">${T.legs.map(l => `<li><span>→ ${l.to}</span><b>${!l.r ? '–' : l.r.walk ? t('walkLeg') : yen(l.r.yen)}</b></li>`).join('')}</ol>
@@ -1275,7 +1340,7 @@ function setSheet(s){ SHEET.snap = s; document.documentElement.dataset.sheet = s
 const map = L.map('map', {zoomControl:false}).setView([34.668,135.49], 13);
 L.control.zoom({position:'bottomright'}).addTo(map);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom:19, attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+  maxZoom:19, attribution:'&copy; OpenStreetMap contributors (map &amp; station data, ODbL)'}).addTo(map);
 const routeLayer = L.layerGroup().addTo(map);
 
 const hereIcon = () => L.divIcon({className:'', html:`<div class="here"><span>${t('here')}</span></div>`, iconSize:[22,22], iconAnchor:[11,11]});
@@ -1337,13 +1402,13 @@ function renderStatic(){
 }
 const originSelect = () => `<label class="sel"><select id="origin" aria-label="${t('origin')}">${ORIGINS.map(o =>
   `<option value="${o.id}"${o === ORIGIN ? ' selected' : ''}>${tr(o.name)}</option>`).join('')}</select></label>`;
-const chipsHtml = () => `<div class="chips">${Object.entries(CATS).map(([k,c]) =>
+const chipsHtml = () => `<div class="chips">${Object.entries(CATS).filter(([, c]) => !c.hidden).map(([k,c]) =>
   `<button class="pill ${state.cat===k?'on':''}" data-cat="${k}">${c.color?`<i style="--c:${c.color}"></i>`:''}${tr(c.name)}</button>`).join('')}</div>`;
 
 function renderPanel(){
   const el = $('pbody');
   if(!state.place){
-    const list = PLACES.filter(p => state.cat==='all' || p.cat===state.cat)
+    const list = PLACES.filter(p => p.cat !== 'station' && (state.cat==='all' || p.cat===state.cat))
       .sort((a,b) => km(ORIGIN.ll,a.ll) - km(ORIGIN.ll,b.ll));
     el.innerHTML = `<div class="shead">
         <div class="from"><span>${t('origin')}</span>${originSelect()}</div>
@@ -1436,20 +1501,36 @@ function clearPlace(){
   syncMarkers(); renderPanel(); drawRoute(); fitAll();
 }
 function fitAll(){
-  const ps = PLACES.filter(p => state.cat==='all' || p.cat===state.cat).map(p => p.ll);
+  const ps = PLACES.filter(p => p.cat !== 'station' && (state.cat==='all' || p.cat===state.cat)).map(p => p.ll);
   map.invalidateSize();
   const far = ps.every(ll => hav(ORIGIN.ll, ll) > 15);
   map.fitBounds(L.latLngBounds(far ? ps : [ORIGIN.ll, ...ps]), {...pad(), maxZoom:15});
 }
-function closeMenus(){ $('suggest').classList.remove('open'); }
+function closeMenus(){ $('suggest').classList.remove('open'); document.documentElement.classList.remove('suggesting'); }
+// a station picked from search becomes a temporary destination
+function stationPlace(sid){
+  const id = 'st_' + sid, have = byId(id); if(have) return have;
+  const s = ST[sid], on = Object.values(LINES).filter(l => l.st && l.st.includes(sid) && l.op !== 'bus');
+  const names = k => on.map(l => tr(l.name)).join(', ');
+  const p = {id, cat:'station', station:sid, ll:s.ll, access:[[sid, 0]], name:X(s.n, s.n, s.ja || s.n),
+    get desc(){ return X(`สถานีของ ${names()}`, `Station on: ${names()}`, `${names()} の駅`); }};
+  PLACES.push(p);
+  markers[id] = L.marker(p.ll, {icon:pinIcon(p)}).addTo(map).on('click', () => selectPlace(id));
+  return p;
+}
+const stationHits = q => !q ? [] : Object.entries(ST).filter(([, s]) => !s.bus && (s.n.toLowerCase().includes(q) || (s.ja || '').includes(q))).slice(0, 8);
 function suggest(){
   const q = $('q').value.trim().toLowerCase();
-  const hits = PLACES.filter(p => !q || [p.name.th, p.name.en, p.name.ja, p.alias || ''].some(n => n.toLowerCase().includes(q)));
-  $('suggest').innerHTML = hits.length ? hits.map(p => `<li data-place="${p.id}">
+  const hits = PLACES.filter(p => p.cat !== 'station' && (!q || [p.name.th, p.name.en, p.name.ja, p.alias || ''].some(n => n.toLowerCase().includes(q))));
+  const sts = stationHits(q);
+  const placeLis = hits.map(p => `<li data-place="${p.id}">
       <span class="bub" style="--c:${CATS[p.cat].color};width:30px;height:30px">${svg(CATS[p.cat].icon)}</span>
-      <span>${pn(p)}<span class="sub">${pSub(p)}</span></span><em>${tr(CATS[p.cat].name)}</em></li>`).join('')
-    : `<li class="empty">${t('noPlace')}</li>`;
-  $('suggest').classList.add('open');
+      <span>${pn(p)}<span class="sub">${pSub(p)}</span></span><em>${tr(CATS[p.cat].name)}</em></li>`);
+  const stLis = sts.map(([sid, s]) => `<li data-station="${sid}">
+      <span class="bub" style="--c:${CATS.station.color};width:30px;height:30px">${svg('train')}</span>
+      <span>${sn(sid)}<span class="sub">${LANG === 'ja' ? s.n : s.ja || ''}</span></span><em>${tr(CATS.station.name)}</em></li>`);
+  $('suggest').innerHTML = placeLis.length || stLis.length ? placeLis.concat(stLis).join('') : `<li class="empty">${t('noPlace')}</li>`;
+  $('suggest').classList.add('open'); document.documentElement.classList.add('suggesting');
 }
 function setOrigin(id){
   ORIGIN = ORIGINS.find(o => o.id === id); state.route = 0;
@@ -1475,11 +1556,13 @@ $('q').addEventListener('focus', () => { $('q').select(); suggest(); });
 $('q').addEventListener('input', () => { $('search').classList.toggle('has-q', !!$('q').value); suggest(); });
 $('q').addEventListener('keydown', e => {
   if(e.isComposing) return;   // let Japanese / Thai IME finish composing first
-  if(e.key === 'Enter'){ const li = $('suggest').querySelector('li[data-place]'); if(li) selectPlace(li.dataset.place); $('q').blur(); }
+  if(e.key === 'Enter'){ const li = $('suggest').querySelector('li[data-place], li[data-station]');
+    if(li) selectPlace(li.dataset.place || stationPlace(li.dataset.station).id); $('q').blur(); }
   if(e.key === 'Escape'){ closeMenus(); $('q').blur(); }
 });
 $('clear').addEventListener('click', e => { e.preventDefault(); clearPlace(); });
-$('suggest').addEventListener('mousedown', e => { const li = e.target.closest('li[data-place]'); if(li){ e.preventDefault(); burst(li, {word:'ドン!', size:.8}); selectPlace(li.dataset.place); $('q').blur(); } });
+$('suggest').addEventListener('mousedown', e => { const li = e.target.closest('li[data-place], li[data-station]');
+  if(li){ e.preventDefault(); burst(li, {word:'ドン!', size:.8}); selectPlace(li.dataset.place || stationPlace(li.dataset.station).id); $('q').blur(); } });
 $('lang').addEventListener('change', e => { burst(e.target.closest('.sel'), {word:'ペラッ', size:.6}); setLang(e.target.value); });
 $('panel').addEventListener('change', e => { if(e.target.id === 'origin'){ burst(e.target.closest('.sel'), {word:'パッ', size:.6}); setOrigin(e.target.value); } });
 $('panel').addEventListener('click', e => {
