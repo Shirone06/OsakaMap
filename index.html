@@ -84,6 +84,8 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left;-webkit
 /* category pills */
 .chips{display:flex;gap:6px;overflow-x:auto;margin:10px -16px 0;padding:0 16px 2px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
+.chips.more{-webkit-mask-image:linear-gradient(90deg,#000 80%,transparent);mask-image:linear-gradient(90deg,#000 80%,transparent)}   /* fade = more pills to the right */
+@media (min-width:721px){.chips{flex-wrap:wrap;overflow:visible}.chips.more{-webkit-mask-image:none;mask-image:none}}
 .pill{flex:none;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:13px;font-weight:600;white-space:nowrap;transition:transform .25s var(--spring),background .15s}
 .pill:hover{background:var(--chip)}
 .pill:active{transform:scale(.92)}
@@ -497,7 +499,8 @@ const ST = {
   gionShijo:{n:'Gion-Shijo', ja:'祇園四条', ll:[35.0037,135.7721]},
   sanjo:{n:'Sanjo', ja:'三条', ll:[35.0089,135.7721]},
   inari:{n:'Inari (JR)', ja:'稲荷（JR）', ll:[34.9671,135.7710]},
-  nara:{n:'Nara (JR)', ja:'奈良（JR）', ll:[34.6807,135.8197]}
+  nara:{n:'Nara (JR)', ja:'奈良（JR）', ll:[34.6807,135.8197]},
+  hankyuArashiyama:{n:'Arashiyama (Hankyu)', ja:'嵐山（阪急）', ll:[35.0104,135.6818]}
 };
 const sn = id => LANG === 'ja' ? ST[id].ja : ST[id].n;
 const stName = id => t(ST[id].bus ? 'busStop' : 'station', sn(id));
@@ -579,6 +582,9 @@ const LINES = {
     tip:X('ขึ้นขบวน 快速急行 หรือ 急行 ปลายทาง 近鉄奈良 ไม่ต้องจ่ายเพิ่ม · ขบวน 特急 ต้องซื้อตั๋วเพิ่ม',
           'Take a 快速急行 or 急行 bound for 近鉄奈良, no extra charge · 特急 limited expresses need an extra ticket',
           '近鉄奈良行きの快速急行・急行に乗車（追加料金なし）・特急は特急券が必要')},
+  hankyuArashiyama:{name:X('Hankyu Arashiyama Line','Hankyu Arashiyama Line','阪急嵐山線'), code:'HK', color:'#8c1d18', op:'hankyu',
+    st:['katsura','hankyuArashiyama'], min:[8], km:[4.1], n:[3], ends:[E('Katsura','桂'), E('Arashiyama','嵐山')],
+    tip:X('เปลี่ยนขบวนที่ Katsura ไปชานชาลาสาย Arashiyama (ขบวนไม่กี่ตู้ วิ่งไปกลับ)','Change at Katsura to the Arashiyama Line platform (a short shuttle train)','桂で嵐山線ホームへ乗り換え（折り返し運転の短い電車）')},
   keihan:{name:X('Keihan Main Line (Limited Express)','Keihan Main Line (Limited Express)','京阪本線（特急）'), code:'KH', color:'#1b3b8f', op:'keihan',
     st:['yodoyabashi','kitahama','temmabashi','kyobashi','hirakatashi','tambabashi','shichijo','gionShijo','sanjo'],
     min:[1,2,4,14,20,6,2,3], km:[0.5,0.8,1.7,18.8,19.5,5.7,1.6,0.7], n:[1,1,1,null,null,null,1,1],
@@ -720,7 +726,163 @@ const PLACES = [
  {id:'harborland', city:X('โกเบ','Kobe','神戸'), name:X('ฮาร์เบอร์แลนด์ · ท่าเรือโกเบ','Kobe Harborland & port','神戸ハーバーランド'), cat:'daytrip', icon:'bag', ll:[34.6793,135.1828],
   desc:X('ย่านช้อปปิ้งริมท่าเรือ ชิงช้าสวรรค์ วิว Kobe Port Tower ยามค่ำสวยมาก','Waterfront shopping, a Ferris wheel and Kobe Port Tower views, lovely at night','ショッピングと観覧車の港エリア。夜のポートタワーの眺めが人気'),
   access:[['kobe',5,X('ออกประตูทางใต้ ลงใต้ดิน Duo Kobe เดินตามป้าย Harborland','South gate, down into the Duo Kobe underground mall, follow the Harborland signs','南口から地下街デュオこうべへ、ハーバーランドの案内に沿って')],
-          ['motomachi',15,X('ออกฝั่งใต้ เดินผ่าน Meriken Park และ Kobe Port Tower ไปทางตะวันตก','Leave on the south side, walk past Meriken Park and Kobe Port Tower, then west','南側に出て、メリケンパーク・ポートタワーを経て西へ')]]}
+          ['motomachi',15,X('ออกฝั่งใต้ เดินผ่าน Meriken Park และ Kobe Port Tower ไปทางตะวันตก','Leave on the south side, walk past Meriken Park and Kobe Port Tower, then west','南側に出て、メリケンパーク・ポートタワーを経て西へ')]]},
+ // ---- more Osaka spots (added 2026-11-19) ----
+ {id:'nambayasaka', name:X('ศาลเจ้านัมบะ ยาซากะ','Namba Yasaka Shrine','難波八阪神社'), cat:'temple', ll:[34.6614,135.4972],
+  desc:X('ศาลเจ้าที่มีหัวสิงโตยักษ์อ้าปาก เชื่อว่ากลืนโชคร้าย','A shrine with a giant open-mouthed lion head that is said to swallow bad luck','巨大な獅子殿が名物。邪気を飲み込むといわれる神社'),
+  access:[['namba',8,X('เดินลงใต้ตามถนน Midosuji แล้วเลี้ยวขวาเข้าซอยหลังห้าง Namba Parks ฝั่งตะวันตก','Walk south along Midosuji, then turn right into the side streets west of Namba Parks','御堂筋を南へ、なんばパークス西側の通りへ右折')],
+          ['daikokucho',8,X('เดินขึ้นเหนือตามถนน Yotsubashi-suji แล้วเลี้ยวขวา','Walk north along Yotsubashi-suji, then turn right','四つ橋筋を北へ歩き、右折')]]},
+ {id:'dendentown', name:X('เด็นเด็นทาวน์ (นิปปมบาชิ)','Den Den Town (Nipponbashi)','でんでんタウン（日本橋）'), alias:'Otaku オタロード', cat:'shop', ll:[34.6620,135.5062],
+  desc:X('ย่านเครื่องใช้ไฟฟ้า อนิเมะ ฟิกเกอร์ เกม ถนน Otaku Road','Electronics, anime, figures and games along Sakaisuji and Otaku Road','家電・アニメ・フィギュア・ゲームの街、オタロード'),
+  access:[['nippombashi',6,X('ขึ้นมาที่ถนน Sakaisuji เดินลงใต้','Come up onto Sakaisuji and walk south','堺筋に出て南へ')],
+          ['ebisucho',6,X('ขึ้นมาที่ถนน Sakaisuji เดินขึ้นเหนือ','Come up onto Sakaisuji and walk north','堺筋に出て北へ')]]},
+ {id:'amemura', name:X('อเมริกามูระ','Amerikamura','アメリカ村'), alias:'アメ村 Amemura', cat:'shop', ll:[34.6716,135.4985],
+  desc:X('ย่านวัยรุ่น ร้านเสื้อผ้ามือสอง สตรีทฟู้ด รอบสวน Triangle Park','Youth district of vintage clothes and street food around Triangle Park','古着屋と屋台グルメの若者の街、三角公園周辺'),
+  access:[['shinsaibashi',5,X('ข้ามถนน Midosuji ไปฝั่งตะวันตก เดินเข้าซอยไปทาง Triangle Park','Cross Midosuji to the west side and head into the side streets to Triangle Park','御堂筋の西側へ渡り、三角公園方面へ')],
+          ['yotsubashi',4,X('เดินไปทางตะวันออกจากถนน Yotsubashi-suji','Walk east from Yotsubashi-suji','四つ橋筋から東へ')]]},
+ {id:'tenmangu', name:X('ศาลเจ้าโอซาก้า เท็มมังงู','Osaka Tenmangu Shrine','大阪天満宮'), cat:'temple', ll:[34.6957,135.5124],
+  desc:X('ศาลเจ้าเทพแห่งการเรียน ต้นกำเนิดเทศกาล Tenjin Matsuri','Shrine to the god of learning, home of the Tenjin Matsuri festival','学問の神様。天神祭の舞台'),
+  access:[['osakatemmangu',3,X('ออกฝั่งเหนือ เดินไปทางตะวันออกถึงประตูศาลเจ้า','Leave on the north side and walk east to the shrine gate','北側に出て東へ、神社の門まで')],
+          ['minamiMorimachi',4,X('ออกฝั่งใต้ เดินลงใต้ตามถนน Tenjinbashi-suji แล้วเลี้ยวซ้าย','Leave on the south side, walk south along Tenjinbashi-suji, then turn left','南側に出て天神橋筋を南へ、左折')]]},
+ {id:'tenjinbashisuji', name:X('ถนนช้อปปิ้งเท็นจินบาชิสุจิ','Tenjinbashi-suji Shopping Street','天神橋筋商店街'), cat:'shop', ll:[34.7020,135.5113],
+  desc:X('ถนนช้อปปิ้งมีหลังคายาวที่สุดในญี่ปุ่น ราว 2.6 กม. ร้านกินราคาท้องถิ่น','Japan’s longest covered shopping street, about 2.6 km, with local-priced food','日本一長い商店街（約2.6km）。地元価格のグルメ'),
+  access:[['ogimachi',3,X('ขึ้นมาก็อยู่ในถนนช้อปปิ้งเลย (ช่วง 4-chome)','You come up right inside the arcade (around 4-chome)','地上に出るとすぐ商店街（4丁目付近）')],
+          ['temma',3,X('ออกประตูหน้าสถานี เดินไปทางตะวันตกไม่กี่ก้าวถึงอาเขต','Leave the station and walk a few steps west into the arcade','駅を出て西へすぐ商店街')],
+          ['tenroku',1,X('ขึ้นมาทางออกฝั่งใต้ ถึงต้นถนนช้อปปิ้งด้านเหนือ','Use a south-side exit to reach the north end of the arcade','南側の出口から商店街の北端へ')]]},
+ {id:'nakanoshima', name:X('สวนนากาโนชิมะ','Nakanoshima Park','中之島公園'), cat:'landmark', ll:[34.6926,135.5075],
+  desc:X('สวนริมแม่น้ำ สวนกุหลาบ และอาคารอิฐเก่า Central Public Hall','Riverside park with a rose garden and the red-brick Central Public Hall','川沿いの公園。バラ園と赤レンガの中央公会堂'),
+  access:[['kitahama',3,X('ขึ้นฝั่งเหนือ ข้ามสะพาน Naniwabashi ลงไปที่สวน','Come up on the north side and cross Naniwabashi Bridge down to the park','北側に出て難波橋を渡り公園へ')],
+          ['yodoyabashi',8,X('เดินไปทางตะวันออกริมแม่น้ำ ผ่านอาคาร Central Public Hall','Walk east along the river past the Central Public Hall','川沿いを東へ、中央公会堂を通って')]]},
+ {id:'tennojizoo', name:X('สวนสัตว์เทนโนจิ','Tennoji Zoo','天王寺動物園'), cat:'fun', ll:[34.6510,135.5085],
+  desc:X('สวนสัตว์กลางเมืองเก่าแก่ ใกล้ชินเซไก','A long-standing city zoo next to Shinsekai','新世界の隣にある歴史ある動物園'),
+  access:[['dobutsuen',6,X('ออกทางออกฝั่ง Shinsekai เดินไปทางตะวันออกถึงประตู Shinsekai Gate','Take an exit on the Shinsekai side and walk east to the Shinsekai Gate','新世界側の出口から東へ、新世界ゲートまで')],
+          ['tennoji',10,X('เดินผ่านสวน Tennoji Park ไปประตู Tennoji Gate','Walk through Tennoji Park to the Tennoji Gate','天王寺公園を抜けて天王寺ゲートへ')]]},
+ {id:'hepfive', name:X('ชิงช้าสวรรค์ HEP FIVE','HEP FIVE Ferris Wheel','HEP FIVE 観覧車'), cat:'fun', ll:[34.7037,135.5004],
+  desc:X('ชิงช้าสวรรค์สีแดงบนหลังคาห้างกลางอุเมดะ','A red Ferris wheel on top of a mall in central Umeda','梅田の商業ビル屋上の赤い観覧車'),
+  access:[['umeda',4,X('ออกประตูฝั่งเหนือ ขึ้นมาถนน เดินไปทางตะวันออก มองหาชิงช้าสีแดง','North gate, up to street level and walk east toward the red wheel','北改札から地上へ、赤い観覧車を目指して東へ')],
+          ['hankyuUmeda',4,X('ลงมาชั้น 1 เดินไปทางใต้ผ่านถนนหน้าสถานี','Go down to the ground floor and walk south across the station-front road','1階に降りて駅前の通りを南へ')],
+          ['higashiUmeda',4,X('ขึ้นมาทางเหนือผ่านอาเขตใต้ดิน Whity Umeda','Walk north through the Whity Umeda underground mall','ホワイティうめだを北へ')]]},
+ {id:'tsuruhashi', name:X('ตลาดสึรุฮาชิ · โคเรียทาวน์','Tsuruhashi Market & Koreatown','鶴橋市場・コリアタウン'), cat:'food', ll:[34.6650,135.5310],
+  desc:X('ตลาดซอยแคบติดสถานี เนื้อย่างยากินิกุ กิมจิ ของเกาหลี','Narrow market lanes by the station: yakiniku, kimchi and Korean food','駅前の路地市場。焼肉、キムチ、韓国グルメ'),
+  access:[['tsuruhashi',2,X('ออกประตูไหนก็เจอตลาดเลย · โคเรียทาวน์ (Miyuki-dori) เดินลงใต้อีกราว 10 นาที','The market starts right outside the gates · Koreatown (Miyuki-dori) is about 10 min further south','改札を出るとすぐ市場・コリアタウン（御幸通）は南へ約10分')]]},
+ {id:'nakazakicho', name:X('ย่านคาเฟ่นากาซากิโจ','Nakazakicho cafés','中崎町カフェ街'), cat:'food', ll:[34.7067,135.5065],
+  desc:X('บ้านไม้เก่ารอดจากสงคราม กลายเป็นคาเฟ่และร้านเล็กๆ','Old pre-war wooden houses turned into cafés and small shops','戦前の長屋を生かしたカフェと雑貨店の街'),
+  access:[['nakazakicho',2,X('ขึ้นมาแล้วเดินเข้าซอยบ้านไม้ฝั่งตะวันออกของถนน','Come up and head into the lanes of old houses east of the main road','地上に出て、通りの東側の路地へ')]]},
+ // ---- more day trips ----
+ {id:'arashiyama', city:X('เกียวโต','Kyoto','京都'), name:X('อาราชิยามะ (สะพานโทเก็ตสึ)','Arashiyama (Togetsukyo Bridge)','嵐山（渡月橋）'), cat:'daytrip', icon:'star', ll:[35.0128,135.6777],
+  desc:X('สะพานไม้ข้ามแม่น้ำกับภูเขา ป่าไผ่ Sagano เดินต่อจากสะพานราว 15 นาที','A wooden bridge under the mountains; the Sagano bamboo grove is about 15 min on foot','山と川の景勝地。竹林の小径は渡月橋から徒歩約15分'),
+  access:[['hankyuArashiyama',6,X('ออกจากสถานีเดินไปทางเหนือ ข้ามสะพาน Togetsukyo · ป่าไผ่อยู่ฝั่งเหนือของสะพาน','Walk north from the station to Togetsukyo Bridge · the bamboo grove is on the north side','駅から北へ渡月橋まで・竹林は橋の北側')]]},
+ {id:'nishiki', city:X('เกียวโต','Kyoto','京都'), name:X('ตลาดนิชิกิ','Nishiki Market','錦市場'), cat:'daytrip', icon:'bowl', ll:[35.0050,135.7650],
+  desc:X('ตลาดอาหารยาว 5 ช่วงตึก ของกินเล่นสไตล์เกียวโต','Five blocks of food stalls with Kyoto-style snacks','「京の台所」と呼ばれる食の市場'),
+  access:[['kyotoKawaramachi',6,X('ขึ้นมาที่ถนน Shijo เดินเข้าอาเขต Shinkyogoku ไปทางเหนือ แล้วเลี้ยวซ้ายเข้าตลาด','Come up on Shijo-dori, walk north into the Shinkyogoku arcade, then turn left into the market','四条通から新京極を北へ、左折して錦市場へ')],
+          ['karasuma',6,X('ขึ้นมาที่ถนน Shijo เดินไปทางตะวันออก แล้วเลี้ยวซ้ายที่ถนน Takakura','Come up on Shijo-dori, walk east, then turn left at Takakura-dori','四条通を東へ、高倉通で左折')]]},
+ {id:'kasuga', city:X('นาระ','Nara','奈良'), name:X('ศาลเจ้าคาสุงะ ไทฉะ','Kasuga Taisha','春日大社'), cat:'daytrip', ll:[34.6812,135.8484],
+  desc:X('ศาลเจ้าสีแดงในป่า มีโคมหินและโคมแขวนนับพัน','A vermilion shrine in the forest with thousands of stone and bronze lanterns','森の中の朱塗りの社殿と数千の灯籠'),
+  access:[['kNara',30,X('เดินตามถนน Noborioji ไปทางตะวันออกผ่านสวนนาระ แล้วเดินตามทางเดินโคมหินถึงศาลเจ้า · หรือขึ้นรถบัสเมืองนาระ','Walk east along Noborioji-dori through Nara Park, then follow the stone-lantern path to the shrine · or take a Nara city bus','登大路を東へ奈良公園を抜け、石灯籠の参道を進む（市内バスも可）')]]},
+ {id:'nankinmachi', city:X('โกเบ','Kobe','神戸'), name:X('ไชน่าทาวน์ นันคินมาชิ','Nankinmachi (Chinatown)','南京町'), cat:'daytrip', icon:'bowl', ll:[34.6880,135.1878],
+  desc:X('ไชน่าทาวน์ของโกเบ ซาลาเปา เกี๊ยว ของกินริมทาง','Kobe’s Chinatown: steamed buns, dumplings and street snacks','神戸の中華街。豚まんや点心の食べ歩き'),
+  access:[['motomachi',3,X('ออกฝั่งใต้ (ทางออก East) เดินลงใต้ข้ามถนนถึงประตูจีน','Leave on the south side (East exit) and walk south across the road to the Chinese gate','東口から南へ、道を渡って中華門へ')]]},
+ // ---- more spots (60+ test, 2026-11-19) ----
+ {id:'hozenji', name:X('วัดโฮเซนจิ · ซอยโฮเซนจิ','Hozenji Temple & Yokocho','法善寺・法善寺横丁'), cat:'temple', ll:[34.6680,135.5026],
+  desc:X('วัดเล็กกลางซอยหินปูทาง มีพระ Mizukake Fudo ที่คนสาดน้ำบูชาจนมอสขึ้นเต็มองค์','A small temple in a stone-paved alley; worshippers splash water on the moss-covered Mizukake Fudo statue','石畳の横丁にある寺。苔むした「水掛不動」に水をかけてお参り'),
+  access:[['namba',5,X('เดินขึ้นเหนือถึงคลอง Dotonbori แล้วเลี้ยวขวา เข้าซอยหินทางขวามือ','Walk north to the Dotonbori canal, turn right, then into the stone alley on your right','道頓堀まで北へ、右折して右手の石畳の路地へ')],
+          ['nippombashi',6,X('เดินไปทางตะวันตกตามถนน Sennichimae','Walk west along Sennichimae-dori','千日前通を西へ')]]},
+ {id:'nambaparks', name:X('นัมบะพาร์กส์','Namba Parks','なんばパークス'), cat:'shop', ll:[34.6617,135.5019],
+  desc:X('ห้างที่มีสวนลอยฟ้าไล่ระดับบนหลังคา','A mall with terraced rooftop gardens','屋上に段々の空中庭園があるショッピングモール'),
+  access:[['nankaiNamba',2,X('ออกประตูกลาง (Central Gate) ชั้น 2 เดินไปทางใต้ เชื่อมกับห้างโดยตรง','Central Gate on 2F, walk south; it connects straight into the mall','2階中央改札から南へ、そのまま直結')],
+          ['namba',7,X('ขึ้นมาตามป้าย Nankai เดินลงใต้ผ่านสถานี Nankai','Follow the Nankai signs up and walk south through the Nankai station building','南海の案内に沿って上がり、南海なんば駅を通って南へ')]]},
+ {id:'spaworld', name:X('สปาเวิลด์','Spa World','スパワールド'), cat:'fun', ll:[34.6505,135.5035],
+  desc:X('ออนเซ็นใหญ่หลายธีมจากทั่วโลก มีสระว่ายน้ำบนหลังคา · มีรอยสักเข้าไม่ได้','A big hot-spring complex with world-themed baths and a rooftop pool · no tattoos','世界の風呂がテーマの大型温泉施設、屋上プールも（タトゥー不可）'),
+  access:[['dobutsuen',3,X('ออกทางออกฝั่ง Shinsekai ตึกอยู่ตรงหัวมุม','Use a Shinsekai-side exit; the building is on the corner','新世界側の出口からすぐ角の建物')],
+          ['shinImamiya',3,X('ออกทางออกฝั่งตะวันออก ข้ามถนนก็ถึง','Leave by the east exit and cross the road','東口を出て道を渡るとすぐ')]]},
+ {id:'museumhistory', name:X('พิพิธภัณฑ์ประวัติศาสตร์โอซาก้า','Osaka Museum of History','大阪歴史博物館'), cat:'fun', ll:[34.6829,135.5204],
+  desc:X('เล่าประวัติเมืองตั้งแต่ยุคโบราณ ชั้นบนมองเห็นปราสาทโอซาก้า','Osaka’s story from ancient times, with Osaka Castle views from the upper floors','古代からの大阪の歴史。上階から大阪城が見えます'),
+  access:[['tani4',2,X('ออกฝั่งสาย Chuo อาคารอยู่ติดสถานี (ข้างตึก NHK)','Leave on the Chuo Line side; the museum is right by the station, next to the NHK building','中央線側の出口からすぐ（NHKの隣）')]]},
+ {id:'grandfront', name:X('แกรนด์ฟรอนต์ โอซาก้า','Grand Front Osaka','グランフロント大阪'), cat:'shop', ll:[34.7046,135.4948],
+  desc:X('ห้างใหญ่ฝั่งเหนือสถานีโอซาก้า ร้านอาหารชั้นบนเยอะ','A big mall north of Osaka Station with lots of restaurants on the upper floors','大阪駅北側の大型商業施設。上階にレストラン多数'),
+  access:[['osaka',3,X('ออกทาง Central North (中央北口) เดินข้ามลานไปทางตะวันออกเฉียงเหนือ','Central North exit (中央北口), then across the plaza to the north-east','中央北口から広場を北東へ')],
+          ['umeda',5,X('ออกประตูฝั่งเหนือ ขึ้นมาตามป้าย Grand Front Osaka','North gate, then follow the Grand Front Osaka signs up','北改札からグランフロント大阪の案内へ')]]},
+ {id:'ohatsutenjin', name:X('ศาลเจ้าโอฮัตสึ เท็นจิน','Ohatsu Tenjin Shrine','お初天神（露天神社）'), cat:'temple', ll:[34.7000,135.5017],
+  desc:X('ศาลเจ้าเล็กกลางย่านกินดื่ม ขอพรเรื่องความรัก','A small shrine in the middle of a dining district, popular for love wishes','繁華街の中にある恋愛成就の神社'),
+  access:[['higashiUmeda',3,X('ขึ้นมาฝั่งเหนือ เดินเข้าถนนช้อปปิ้ง Ohatsutenjin-dori','Come up on the north side and into the Ohatsutenjin-dori arcade','北側に出て、お初天神通り商店街へ')],
+          ['umeda',6,X('เดินไปทางตะวันออกผ่านอาเขตใต้ดิน Whity Umeda','Walk east through the Whity Umeda underground mall','ホワイティうめだを東へ')]]},
+ {id:'nakanoshimamuseums', name:X('พิพิธภัณฑ์นากาโนชิมะ','Nakanoshima museums','中之島の美術館・科学館'), cat:'fun', ll:[34.6912,135.4920],
+  desc:X('พิพิธภัณฑ์ศิลปะ Nakanoshima, National Museum of Art และพิพิธภัณฑ์วิทยาศาสตร์อยู่ติดกัน','Nakanoshima Museum of Art, the National Museum of Art and the Science Museum side by side','中之島美術館・国立国際美術館・科学館が並ぶエリア'),
+  access:[['higobashi',7,X('ขึ้นมาฝั่งใต้ของแม่น้ำ ข้ามสะพานขึ้นเหนือแล้วเดินไปทางตะวันตก','Come up south of the river, cross the bridge north, then walk west','川の南側に出て橋を北へ渡り、西へ')]]},
+ {id:'livingmuseum', name:X('พิพิธภัณฑ์บ้านและชีวิตโอซาก้า','Osaka Museum of Housing and Living','大阪くらしの今昔館'), cat:'fun', ll:[34.7098,135.5112],
+  desc:X('เมืองจำลองยุคเอโดะขนาดเท่าจริง ใส่ชุดกิโมโนเดินเล่นได้','A life-size Edo-period street you can walk through; kimono rental available','実物大の江戸時代の町並み。着物体験も'),
+  access:[['tenroku',1,X('ใช้ทางออกที่เชื่อมกับอาคาร Housing Information Center แล้วขึ้นลิฟต์ไปชั้น 8','Take the exit connected to the Housing Information Center building, then the lift to 8F','住まい情報センタービル直結の出口から8階へ')]]},
+ {id:'sakuranomiya', name:X('สวนเคมะ ซากุระโนะมิยะ','Kema Sakuranomiya Park','毛馬桜之宮公園'), cat:'landmark', ll:[34.7020,135.5225],
+  desc:X('ทางเดินริมแม่น้ำยาวหลายกิโล ซากุระราว 4,000 ต้น สวยมากช่วงต้นเมษายน','A long riverside path with about 4,000 cherry trees, best in early April','約4,000本の桜並木が続く川沿い。4月上旬が見頃'),
+  access:[['sakuranomiya',6,X('ออกทางออกฝั่งตะวันตก เดินไปทางแม่น้ำ','Leave by the west exit and walk to the river','西口から川の方へ')]]},
+ {id:'tempozanwheel', name:X('ชิงช้าสวรรค์เทมโปซัง','Tempozan Ferris Wheel','天保山大観覧車'), cat:'fun', ll:[34.6563,135.4318],
+  desc:X('ชิงช้าสวรรค์ยักษ์ข้างไคยูคัง เห็นอ่าวโอซาก้า ตอนกลางคืนเปิดไฟ','A giant Ferris wheel next to Kaiyukan with Osaka Bay views, lit up at night','海遊館の隣の大観覧車。大阪湾が一望、夜はライトアップ'),
+  access:[['osakako',6,X('ออกทางออก 1 เดินตรงไปทางชิงช้าสวรรค์','Exit 1, straight ahead toward the wheel','1番出口から観覧車へまっすぐ')]]},
+ {id:'cosmotower', name:X('หอชมวิวซากิชิมะ คอสโม ทาวเวอร์','Sakishima Cosmo Tower Observatory','さきしまコスモタワー展望台'), cat:'landmark', ll:[34.6385,135.4148],
+  desc:X('จุดชมวิวกระจกรอบทิศบนตึก 252 เมตร วิวพระอาทิตย์ตกลงทะเล','An all-glass observatory 252 m up, with sunsets over the bay','高さ252mのガラス張り展望台。海に沈む夕日'),
+  access:[['cosmosquare',8,X('เดินไปทางใต้ ตามป้าย Sakishima Cosmo Tower','Walk south following the Sakishima Cosmo Tower signs','さきしまコスモタワーの案内に沿って南へ')]]},
+ {id:'doguyasuji', name:X('ถนนเครื่องครัวเซ็นนิจิมาเอะ โดกุยะสุจิ','Sennichimae Doguyasuji','千日前道具屋筋商店街'), cat:'shop', ll:[34.6650,135.5035],
+  desc:X('ถนนร้านเครื่องครัวมืออาชีพ มีดญี่ปุ่น ถ้วยชาม ของจำลองอาหาร','A kitchenware street: Japanese knives, tableware and plastic food samples','包丁・食器・食品サンプルが揃う道具街'),
+  access:[['namba',4,X('ออกฝั่งตะวันออกเดินผ่านหน้าห้าง Takashimaya ไปทางตะวันออก','Leave on the east side and walk east past Takashimaya','東側に出て高島屋の前を東へ')],
+          ['nippombashi',5,X('เดินไปทางตะวันตกตามถนน Sennichimae แล้วเลี้ยวซ้าย','Walk west along Sennichimae-dori, then turn left','千日前通を西へ、左折')]]},
+ {id:'ngk', name:X('โรงละครตลก นัมบะ แกรนด์ คาเง็ตสึ','Namba Grand Kagetsu (NGK)','なんばグランド花月'), cat:'fun', ll:[34.6656,135.5040],
+  desc:X('โรงละครตลกของ Yoshimoto ต้นตำรับมุกโอซาก้า (ภาษาญี่ปุ่น)','Yoshimoto’s comedy theatre, the home of Osaka humour (in Japanese)','吉本興業の劇場。大阪のお笑いの殿堂'),
+  access:[['nippombashi',4,X('เดินไปทางตะวันตกตามถนน Sennichimae','Walk west along Sennichimae-dori','千日前通を西へ')],
+          ['namba',5,X('ออกฝั่งตะวันออก เดินไปทางตะวันออกเลียบถนน Sennichimae','Leave on the east side and walk east along Sennichimae-dori','東側に出て千日前通沿いを東へ')]]},
+ {id:'orangestreet', name:X('ถนนออเรนจ์ มินามิโฮริเอะ','Minami-Horie Orange Street','南堀江オレンジストリート'), cat:'shop', ll:[34.6732,135.4920],
+  desc:X('ถนนร้านเฟอร์นิเจอร์ แฟชั่น คาเฟ่ บรรยากาศชิล','A relaxed street of furniture, fashion and café shops','家具・ファッション・カフェが並ぶおしゃれな通り'),
+  access:[['yotsubashi',6,X('เดินไปทางตะวันตกข้ามถนน Naniwa-suji','Walk west across Naniwa-suji','なにわ筋を西へ渡る')]]},
+ {id:'utsubo', name:X('สวนอุสึโบะ','Utsubo Park','靭公園'), cat:'landmark', ll:[34.6858,135.4928],
+  desc:X('สวนยาวกลางเมือง สวนกุหลาบ ร้านคาเฟ่รอบสวน','A long city park with a rose garden and cafés around it','街中の細長い公園。バラ園と周辺のカフェ'),
+  access:[['hommachi',8,X('ใช้ทางออกฝั่งสาย Yotsubashi เดินขึ้นเหนือ','Use an exit on the Yotsubashi Line side and walk north','四つ橋線側の出口から北へ')],
+          ['awaza',9,X('เดินขึ้นเหนือไปทางตะวันออก','Walk north-east','北東へ')]]},
+ {id:'tennojipark', name:X('สวนเทนโนจิ (Tennoshiba · Keitakuen)','Tennoji Park (Tennoshiba & Keitakuen)','天王寺公園（てんしば・慶沢園）'), cat:'landmark', ll:[34.6480,135.5120],
+  desc:X('สนามหญ้าโล่งกลางเมืองมีคาเฟ่ และสวนญี่ปุ่น Keitakuen ด้านใน','A big city lawn with cafés, and the Keitakuen Japanese garden inside','芝生広場とカフェ、奥に日本庭園「慶沢園」'),
+  access:[['tennoji',3,X('ออกฝั่งเหนือ ข้ามถนนก็ถึงสนามหญ้า Tennoshiba','Leave on the north side and cross the road to the Tennoshiba lawn','北側に出て道を渡るとてんしば')]]},
+ {id:'fukushimafood', name:X('ย่านร้านกินฟุกุชิมะ','Fukushima food alleys','福島の飲食街'), cat:'food', ll:[34.6965,135.4850],
+  desc:X('ซอยร้านกินดื่มเล็กๆ ราคาท้องถิ่น ยากิโทริ โอเด้ง ห่างอุเมดะสถานีเดียว','Small local-priced eateries — yakitori, oden — one stop from Umeda','焼き鳥やおでんの小さな店が並ぶ、梅田の隣駅のグルメ街'),
+  access:[['fukushima',2,X('ออกจากสถานีแล้วเดินเข้าซอยใต้รางรถไฟและรอบๆ','Leave the station and wander the lanes under and around the tracks','駅を出て高架下と周辺の路地へ')]]},
+ {id:'uranamba', name:X('อุระนัมบะ','Ura-Namba','裏なんば'), cat:'food', ll:[34.6645,135.5025],
+  desc:X('ซอยร้านเหล้าและร้านกินเล็กๆ หลังย่านนัมบะ บรรยากาศคนท้องถิ่น','Back-street bars and small eateries behind Namba with a local feel','なんばの裏路地に小さな居酒屋が集まるエリア'),
+  access:[['nankaiNamba',3,X('ออกฝั่งตะวันออก ข้ามถนนเข้าซอยเล็กๆ','Leave on the east side and cross into the small lanes','東側に出て道を渡り路地へ')],
+          ['namba',5,X('ออกฝั่งตะวันออกเดินลงใต้ผ่าน Takashimaya','Leave on the east side and walk south past Takashimaya','東側に出て高島屋を南へ')]]},
+ {id:'kyototower', city:X('เกียวโต','Kyoto','京都'), icon:'star', name:X('เกียวโตทาวเวอร์ · สถานีเกียวโต','Kyoto Tower & Kyoto Station','京都タワー・京都駅'), cat:'daytrip', ll:[34.9875,135.7593],
+  desc:X('หอคอยตรงข้ามสถานีเกียวโต และตัวสถานีที่มีบันไดยักษ์กับลานชมวิวบนหลังคา','The tower across from Kyoto Station, and the station’s giant staircase and rooftop terrace','京都駅前のタワーと、大階段・屋上広場のある駅ビル'),
+  access:[['kyoto',2,X('ออกทางออกฝั่งเหนือ (Karasuma Central Gate) หอคอยอยู่ตรงข้ามถนน','North side (Karasuma Central Gate); the tower is across the road','烏丸中央口を出て道の向かい')]]},
+ {id:'sanjusangendo', city:X('เกียวโต','Kyoto','京都'), name:X('วัดซันจูซันเก็นโด','Sanjusangendo','三十三間堂'), cat:'daytrip', ll:[34.9879,135.7718],
+  desc:X('วิหารไม้ยาว 120 เมตร พระพุทธรูปพันกรเรียงกัน 1,001 องค์','A 120 m wooden hall with 1,001 statues of the thousand-armed Kannon','長さ120mのお堂に千体の千手観音像'),
+  access:[['shichijo',7,X('ขึ้นมาที่ถนน Shichijo เดินไปทางตะวันออก','Come up onto Shichijo-dori and walk east','七条通に出て東へ')]]},
+ {id:'pontocho', city:X('เกียวโต','Kyoto','京都'), icon:'bowl', name:X('ซอยปนโตะโจ','Pontocho','先斗町'), cat:'daytrip', ll:[35.0063,135.7710],
+  desc:X('ซอยแคบริมแม่น้ำ Kamo ร้านอาหารเกียวโต ร้านมีระเบียงริมน้ำหน้าร้อน','A narrow lane by the Kamo river lined with Kyoto restaurants; riverside terraces in summer','鴨川沿いの細い路地に京料理店。夏は川床'),
+  access:[['kyotoKawaramachi',3,X('ขึ้นมาที่ถนน Shijo เดินไปทางตะวันออกจนเกือบถึงสะพาน แล้วเลี้ยวซ้ายเข้าซอย','Come up on Shijo-dori, walk east almost to the bridge, then left into the lane','四条通を東へ、橋の手前で左の路地へ')],
+          ['gionShijo',4,X('ข้ามสะพาน Shijo-ohashi ไปทางตะวันตก แล้วเลี้ยวขวาเข้าซอย','Cross Shijo-ohashi Bridge westward, then right into the lane','四条大橋を西へ渡り、右の路地へ')]]},
+ {id:'heian', city:X('เกียวโต','Kyoto','京都'), name:X('ศาลเจ้าเฮอัน','Heian Shrine','平安神宮'), cat:'daytrip', ll:[35.0160,135.7824],
+  desc:X('ศาลเจ้าสีแดงเขียวขนาดใหญ่ เสาโทริอิยักษ์หน้าทางเข้า สวนญี่ปุ่นด้านหลัง','A large red-and-green shrine with a giant torii and a Japanese garden behind','巨大な大鳥居と朱塗りの社殿、奥に神苑'),
+  access:[['sanjo',18,X('เดินไปทางตะวันออกตามถนน Sanjo แล้วเลี้ยวซ้ายที่ถนนไปโทริอิยักษ์ · หรือขึ้นแท็กซี่/รถบัส','Walk east along Sanjo-dori, then turn left toward the giant torii · or take a taxi or bus','三条通を東へ、大鳥居の方へ左折（タクシー・バスも可）')]]},
+ {id:'sannenzaka', city:X('เกียวโต','Kyoto','京都'), icon:'star', name:X('ซันเนนซากะ · เจดีย์ยาซากะ','Sannenzaka & Yasaka Pagoda','三年坂・八坂の塔'), cat:'daytrip', ll:[34.9985,135.7808],
+  desc:X('ถนนหินเก่าเนินเขาฮิงาชิยามะ ร้านขนม ของที่ระลึก มุมถ่ายรูปเจดีย์ห้าชั้น','Old stone-paved slopes of Higashiyama with sweets and souvenirs, and the five-storey pagoda view','東山の石畳の坂道。お土産と八坂の塔の撮影スポット'),
+  access:[['gionShijo',15,X('เดินไปทางตะวันออกตามถนน Shijo ถึงศาลเจ้า Yasaka แล้วเลี้ยวขวาไปตามถนน Nene-no-michi','Walk east along Shijo-dori to Yasaka Shrine, then right along Nene-no-michi','四条通を東へ八坂神社まで、右へねねの道を通って')],
+          ['kiyomizuGojo',18,X('เดินไปทางตะวันออกตามถนน Gojo แล้วเลี้ยวซ้ายขึ้นเนิน','Walk east along Gojo-dori, then turn left uphill','五条通を東へ、左へ坂を上る')]]},
+ {id:'bamboo', city:X('เกียวโต','Kyoto','京都'), icon:'star', name:X('ป่าไผ่อาราชิยามะ','Arashiyama Bamboo Grove','嵐山 竹林の小径'), cat:'daytrip', ll:[35.0170,135.6720],
+  desc:X('ทางเดินผ่านป่าไผ่สูง ไปเช้าก่อน 8 โมงคนน้อย','A path through towering bamboo; go before 8 am to beat the crowds','高い竹に囲まれた小径。朝8時前が空いています'),
+  access:[['hankyuArashiyama',20,X('เดินขึ้นเหนือข้ามสะพาน Togetsukyo แล้วเลี้ยวซ้ายผ่านหน้าวัด Tenryuji','Walk north across Togetsukyo Bridge, then left past Tenryu-ji','渡月橋を北へ渡り、天龍寺の前を左へ')]]},
+ {id:'kofukuji', city:X('นาระ','Nara','奈良'), name:X('วัดโคฟุกุจิ','Kofuku-ji','興福寺'), cat:'daytrip', ll:[34.6830,135.8318],
+  desc:X('วัดเก่าแก่ เจดีย์ห้าชั้นสูงอันดับ 2 ของญี่ปุ่น อยู่ระหว่างทางไปสวนนาระ','An ancient temple with Japan’s second-tallest five-storey pagoda, on the way to Nara Park','日本で2番目に高い五重塔。奈良公園への途中'),
+  access:[['kNara',5,X('ขึ้นมาทางถนน Noborioji เดินไปทางตะวันออก วัดอยู่ทางขวา','Come up onto Noborioji-dori and walk east; the temple is on the right','登大路に出て東へ、右手')]]},
+ {id:'naramachi', city:X('นาระ','Nara','奈良'), icon:'bag', name:X('นาระมาจิ','Naramachi','ならまち'), cat:'daytrip', ll:[34.6775,135.8300],
+  desc:X('ย่านบ้านไม้เก่าของพ่อค้า ร้านคาเฟ่และร้านของที่ระลึกเล็กๆ','The old merchant-house quarter with small cafés and craft shops','町家が残る旧市街。カフェと雑貨店'),
+  access:[['kNara',12,X('เดินลงใต้ผ่านถนนช้อปปิ้ง Higashimuki แล้วข้ามถนน Sanjo','Walk south through the Higashimuki arcade and across Sanjo-dori','東向商店街を南へ、三条通を渡る')],
+          ['nara',15,X('เดินไปทางตะวันออกตามถนน Sanjo แล้วเลี้ยวขวา','Walk east along Sanjo-dori, then turn right','三条通を東へ、右折')]]},
+ {id:'meriken', city:X('โกเบ','Kobe','神戸'), icon:'star', name:X('เมริเคนพาร์ก · โกเบพอร์ตทาวเวอร์','Meriken Park & Kobe Port Tower','メリケンパーク・神戸ポートタワー'), cat:'daytrip', ll:[34.6828,135.1885],
+  desc:X('สวนริมทะเล ป้าย BE KOBE หอคอยสีแดง ถ่ายรูปยามค่ำสวย','Waterfront park with the BE KOBE sign and the red tower, lovely at night','BE KOBEモニュメントと赤いタワーの海辺の公園'),
+  access:[['motomachi',10,X('ออกฝั่งใต้ เดินลงใต้ผ่านไชน่าทาวน์ไปทางทะเล','Leave on the south side and walk south through Chinatown to the sea','南側に出て南京町を抜け海へ')]]},
+ {id:'ikuta', city:X('โกเบ','Kobe','神戸'), name:X('ศาลเจ้าอิคุตะ','Ikuta Shrine','生田神社'), cat:'daytrip', ll:[34.6935,135.1912],
+  desc:X('ศาลเจ้าเก่าแก่กลางเมืองซันโนมิยะ ขอพรเรื่องความรัก','An ancient shrine in central Sannomiya, popular for love wishes','三宮の中心にある古社。縁結びで人気'),
+  access:[['hankyuSannomiya',5,X('ออกฝั่งตะวันตก เดินขึ้นเหนือตามถนนหน้าศาลเจ้า','Leave on the west side and walk north up the shrine road','西側に出て参道を北へ')],
+          ['sannomiya',7,X('ออกทาง West Gate เดินไปทางตะวันตก แล้วเลี้ยวขวา','West Gate, walk west, then turn right','西口から西へ、右折')]]},
+ {id:'centergai', city:X('โกเบ','Kobe','神戸'), icon:'bag', name:X('ถนนช้อปปิ้งซันโนมิยะ เซ็นเตอร์ไก','Sannomiya Center Gai','三宮センター街'), cat:'daytrip', ll:[34.6918,135.1935],
+  desc:X('ถนนช้อปปิ้งมีหลังคาใจกลางโกเบ ต่อไปถึงโมโตมาจิได้','Kobe’s central covered shopping street, running on toward Motomachi','神戸中心部のアーケード商店街。元町方面へ続く'),
+  access:[['sannomiya',3,X('ออกฝั่งใต้ (West Gate) ข้ามถนนเข้าอาเขต','South side (West Gate), across the road into the arcade','西口から南側へ渡りアーケードへ')]]}
 ];
 const pn = p => tr(p.name);
 const pSub = p => (p.city ? [tr(p.city)] : []).concat(LANG === 'th' ? [p.name.en, p.name.ja] : LANG === 'en' ? [p.name.ja] : [p.name.en]).join(' · ');
@@ -869,16 +1031,18 @@ function railRoute(origin, place, ban = {}){
   const goal = {}; place.access.forEach(a => goal[a[0]] = a);
   const fromSt = {}; origin.access.forEach(a => fromSt[a[0]] = 1);   // stations you can already walk to are not a ride
   const opOf = l => LINES[l] && LINES[l].op;
+  // fast trains (stopAt) can only be boarded or left where they stop
+  const canStop = (l, s) => !LINES[l] || !LINES[l].stopAt || LINES[l].stopAt.includes(s);
   let best = null;
   while(open.size){
     const k = open.pop()[1]; if(done[k]) continue; done[k] = 1;
     if(best && dist[k] >= best.tot) break;
     const [s,l] = k.split('|');
-    if(goal[s] && !fromSt[s] && l !== 'start' && l !== 'walk'){ const tot = dist[k] + goal[s][1]; if(!best || tot < best.tot) best = {k, tot, acc:goal[s]}; }
+    if(goal[s] && !fromSt[s] && l !== 'start' && l !== 'walk' && canStop(l, s)){ const tot = dist[k] + goal[s][1]; if(!best || tot < best.tot) best = {k, tot, acc:goal[s]}; }
     for(const e of ADJ[s] || []){
       let nk, c;
-      if(e.walk){ if(l === 'walk' || l === 'start') continue; nk = key(e.to,'walk'); c = dist[k] + e.min; }
-      else { if(ban[e.line]) continue; nk = key(e.to,e.line);
+      if(e.walk){ if(l === 'walk' || l === 'start' || !canStop(l, s)) continue; nk = key(e.to,'walk'); c = dist[k] + e.min; }
+      else { if(ban[e.line]) continue; if(l !== e.line && (!canStop(e.line, s) || !canStop(l, s))) continue; nk = key(e.to,e.line);
         // boarding 2-3 min, same-operator transfer 4, changing operator (exit gates, new ticket) 7
         c = dist[k] + e.min + (l === e.line ? 0 : l === 'start' ? 2 : l === 'walk' ? 3 : opOf(l) === opOf(e.line) ? 4 : 7); }
       if(dist[nk] === undefined || c < dist[nk]){ dist[nk] = c; prev[nk] = {from:k, e}; open.push(c, nk); }
@@ -1754,7 +1918,7 @@ document.addEventListener('mousedown', e => { if(!e.target.closest('#search')) c
 // sheet dragging
 let drag = null, justDragged = false;
 $('panel').addEventListener('pointerdown', e => {
-  if(!isMobile() || !e.target.closest('.grab, .shead') || e.target.closest('select')) return;
+  if(!isMobile() || !e.target.closest('.grab, .shead') || e.target.closest('select, .chips')) return;
   drag = {id:e.pointerId, y:e.clientY, h:sheetPx(SHEET.snap), t:performance.now(), moved:false};
 });
 addEventListener('pointermove', e => {
@@ -1781,6 +1945,16 @@ addEventListener('pointerup', e => endDrag(e));
 addEventListener('pointercancel', e => endDrag(e, true));
 $('panel').addEventListener('click', e => { if(justDragged){ e.stopPropagation(); e.preventDefault(); } }, true);
 addEventListener('resize', () => applySheet(sheetPx(SHEET.snap)));
+
+// category pills: show the fade while more pills are hidden to the right; a mouse wheel scrolls them sideways
+const pillFade = el => el.classList.toggle('more', el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+document.addEventListener('scroll', e => { if(e.target.classList && e.target.classList.contains('chips')) pillFade(e.target); }, true);
+new MutationObserver(() => document.querySelectorAll('.chips').forEach(pillFade)).observe($('panel'), {childList:true, subtree:true});
+addEventListener('resize', () => document.querySelectorAll('.chips').forEach(pillFade));
+$('panel').addEventListener('wheel', e => {
+  const c = e.target.closest('.chips'); if(!c || c.scrollWidth <= c.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  c.scrollLeft += e.deltaY; e.preventDefault();
+}, {passive:false});
 
 setSheet('half');
 renderAll(); fitAll();
