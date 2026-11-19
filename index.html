@@ -161,6 +161,57 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left;-webkit
 @keyframes ping{from{transform:scale(.5);opacity:1}to{transform:scale(1.5);opacity:0}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
+/* ---------- impact-frame effects ---------- */
+#fx{position:fixed;inset:0;z-index:3000;pointer-events:none;overflow:hidden}
+.fx-burst{position:absolute;transform:translate(-50%,-50%)}
+.fx-burst svg{position:absolute;inset:0;overflow:visible}
+.fx-burst .star{fill:var(--soft);stroke:var(--ink);stroke-width:2.5;stroke-linejoin:round;transform-box:fill-box;transform-origin:center;animation:fxStar .6s var(--spring) forwards}
+.fx-burst .speed{stroke:var(--acc);stroke-width:3;stroke-linecap:round;animation:fxFade .45s ease-out .05s forwards;opacity:0}
+.fx-burst .puff{position:absolute;left:50%;top:50%;width:24px;height:24px;margin:-12px;border-radius:50%;background:#fff;border:2.5px solid var(--ink);box-shadow:inset -4px -4px 0 var(--chip);animation:fxPuff .75s cubic-bezier(.2,.8,.3,1) forwards}
+.fx-burst .shard{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px;background:var(--pri);border:2px solid var(--ink);animation:fxShard .7s cubic-bezier(.2,.8,.3,1) forwards}
+.fx-burst .sfx{position:absolute;left:50%;top:2%;font:italic 800 calc(30px + 8px*var(--k)) / 1 "M PLUS Rounded 1c",var(--font);color:var(--ink);-webkit-text-stroke:6px #fff;paint-order:stroke fill;filter:drop-shadow(3px 3px 0 var(--acc));white-space:nowrap;animation:fxWord .9s var(--spring) forwards}
+@keyframes fxStar{0%{transform:scale(.15) rotate(-10deg);opacity:1}55%{transform:scale(1) rotate(3deg);opacity:1}100%{transform:scale(1.15) rotate(6deg);opacity:0}}
+@keyframes fxFade{0%{opacity:1}100%{opacity:0}}
+@keyframes fxPuff{0%{transform:translate(0,0) scale(.2);opacity:1}45%{transform:translate(calc(var(--dx)*.8),calc(var(--dy)*.8)) scale(var(--s));opacity:1}75%{opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(calc(var(--s)*.35));opacity:0}}
+@keyframes fxShard{0%{transform:translate(0,0) rotate(0) scale(.4);opacity:1}70%{opacity:1}100%{transform:translate(var(--dx),var(--dy)) rotate(var(--r)) scale(.9);opacity:0}}
+@keyframes fxWord{0%{transform:translate(-50%,-50%) rotate(var(--rot)) scale(.2);opacity:0}30%{transform:translate(-50%,-50%) rotate(var(--rot)) scale(1.18);opacity:1}55%{transform:translate(-50%,-50%) rotate(var(--rot)) scale(1)}80%{opacity:1}100%{transform:translate(-50%,-85%) rotate(var(--rot)) scale(1);opacity:0}}
+
+/* ---------- photo guides inside a walking step ---------- */
+.shots{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin:8px -14px 0 -2px;padding:4px 14px 8px 2px;scrollbar-width:none;overscroll-behavior-x:contain}
+.shots::-webkit-scrollbar{display:none}
+.shot{flex:none;width:96px;scroll-snap-align:start;display:flex;flex-direction:column;gap:6px}
+.shot .ph{position:relative;display:block;width:96px;height:128px;border-radius:12px;border:2.5px solid var(--ink);box-shadow:3px 4px 0 var(--soft);overflow:hidden;background:var(--chip);transition:box-shadow .2s}
+.shot:hover .ph{box-shadow:3px 4px 0 var(--acc)}
+.shot .ph svg,.shot .ph img,.pic svg,.pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.no{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;font-weight:800;line-height:1}
+.shot .no{position:absolute;left:6px;top:6px}
+.stop{position:absolute;right:6px;top:6px;padding:2px 7px;border-radius:999px;background:var(--acc);color:#fff;font-size:10.5px;font-weight:800;transform:rotate(4deg);border:2px solid var(--ink)}
+.shot .cap{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:11.5px;font-weight:600;line-height:1.3;color:var(--ink)}
+.step .meta .cam{display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:0 7px;border-radius:999px;background:var(--chip);color:var(--ink);font-weight:700}
+
+/* ---------- full-screen photo viewer ---------- */
+.viewer{position:fixed;inset:0;z-index:2500;display:flex;flex-direction:column;background:rgba(29,26,74,.95);color:#fff;animation:vIn .22s ease-out}
+.viewer[hidden]{display:none}
+.vtop{flex:none;display:flex;align-items:center;gap:10px;padding:max(12px,env(safe-area-inset-top)) 12px 6px 16px}
+.vtitle{flex:1;min-width:0;font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vcount{flex:none;font-weight:800;font-size:13px;background:#fff;color:var(--ink);border-radius:999px;padding:3px 10px}
+.vbtn{flex:none;width:44px;height:44px;border-radius:50%;background:#fff;color:var(--ink);border:3px solid var(--ink);box-shadow:3px 4px 0 var(--acc);display:grid;place-items:center;font-size:24px;font-weight:800;line-height:1;padding-bottom:2px}
+.vbtn:disabled{opacity:.3;box-shadow:none}
+.vtrack{flex:1;min-height:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior:contain}
+.vtrack::-webkit-scrollbar{display:none}
+.slide{flex:none;width:100%;margin:0;scroll-snap-align:center;scroll-snap-stop:always;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:6px 18px}
+.pic{position:relative;width:min(100%,420px,calc((100dvh - 290px)*.75));aspect-ratio:3/4;border-radius:16px;border:3px solid #fff;box-shadow:6px 7px 0 var(--acc);overflow:hidden;background:var(--chip)}
+.pic .stop{top:10px;right:10px;font-size:12px}
+.vcap{width:min(100%,420px);display:flex;gap:10px;align-items:flex-start;background:#fff;color:var(--ink);border:3px solid var(--ink);border-radius:14px;padding:10px 12px;box-shadow:4px 5px 0 var(--soft)}
+.vcap .no{flex:none;margin-top:1px}
+.vcap b{display:block;font-weight:700;line-height:1.35}
+.vcap small{display:block;margin-top:3px;font-size:11.5px;color:var(--mute);font-weight:600}
+.vnav{flex:none;display:flex;align-items:center;justify-content:center;gap:16px;padding:8px 16px max(16px,env(safe-area-inset-bottom))}
+.vdots{display:flex;gap:6px}
+.vdots i{width:8px;height:8px;border-radius:4px;background:rgba(255,255,255,.35);transition:width .3s var(--spring),background .2s}
+.vdots i.on{width:22px;background:#fff}
+@keyframes vIn{from{opacity:0}}
+
 /* ---------- phone: one-line search on top, draggable bottom sheet ---------- */
 @media (max-width:720px){
   .ui{top:10px;left:10px;right:10px;bottom:auto;width:auto;gap:0}
@@ -203,6 +254,12 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left;-webkit
     <div class="grab" aria-hidden="true"></div>
     <div class="pbody" id="pbody"></div>
   </aside>
+</div>
+<div id="fx" aria-hidden="true"></div>
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" hidden>
+  <div class="vtop"><div class="vtitle" id="vTitle"></div><span class="vcount" id="vCount"></span><button class="vbtn" id="vClose">×</button></div>
+  <div class="vtrack" id="vTrack"></div>
+  <div class="vnav"><button class="vbtn" id="vPrev">‹</button><div class="vdots" id="vDots"></div><button class="vbtn" id="vNext">›</button></div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -508,14 +565,14 @@ function railRoute(origin, place, ban = {}){
   if(p.m > 0) steps.push({t:'walk', kind:'to', st:p.s, min:p.m, path:[origin.ll, ST[p.s].ll], tip:p.tip});
   for(const e of edges){
     const last = steps[steps.length-1];
-    if(e.walk) steps.push({t:'walk', kind:'transfer', st:e.to, min:e.min, path:e.path});
+    if(e.walk) steps.push({t:'walk', kind:'transfer', from:cur, st:e.to, min:e.min, path:e.path});
     else if(last && last.t === 'ride' && last.line === e.line){
       last.to = e.to; last.min += e.min; last.km += e.km; last.path.push(...e.path.slice(1));
       last.stops = (last.stops == null || e.n == null) ? null : last.stops + e.n;
     } else steps.push({t:'ride', line:e.line, from:cur, to:e.to, stops:e.n, min:e.min, km:e.km, dir:e.dir, path:[...e.path]});
     cur = e.to;
   }
-  steps.push({t:'walk', kind:'last', text:best.acc[2], place, min:best.acc[1], path:[ST[cur].ll, place.ll]});
+  steps.push({t:'walk', kind:'last', text:best.acc[2], place, st:cur, min:best.acc[1], path:[ST[cur].ll, place.ll]});
 
   // fare: consecutive rides on the same operator share one ticket
   const rides = steps.filter(s => s.t === 'ride'); let yen = 0, i = 0;
@@ -559,7 +616,7 @@ function routesFor(p){
   const top = out[0];
   if(d <= 2.6){
     const wk = +(d*1.25).toFixed(1), wmin = Math.max(1, Math.round(d*15));
-    const w = {mode:'walk', min:wmin, yen:0, km:wk, steps:[{t:'walk', kind:'direct', km:wk, min:wmin, path:[ORIGIN.ll, p.ll]}]};
+    const w = {mode:'walk', min:wmin, yen:0, km:wk, steps:[{t:'walk', kind:'direct', place:p, km:wk, min:wmin, path:[ORIGIN.ll, p.ll]}]};
     if(w.min <= 12){ w.tag = 'near'; out = [w]; }          // too close to bother riding
     else if(!top || w.min <= top.min){ w.tag = 'rec'; if(top) top.tag = null; out.unshift(w); }
     else out.push(w);
@@ -601,6 +658,171 @@ const price = r => r.yenText || (r.yen ? '¥'+r.yen.toLocaleString('en-US') : t(
 const transfers = r => Math.max(0, r.steps.filter(s => s.t==='ride').length - 1);
 const walkMin = r => r.steps.filter(s => s.t==='walk').reduce((a,s) => a+s.min, 0);
 
+/* ================= FX: anime impact frames ================= */
+// Starburst + speed lines + smoke puffs + shards + manga lettering, drawn on a fixed overlay so it survives re-renders.
+const calm = matchMedia('(prefers-reduced-motion: reduce)');
+const rnd = (a, b) => a + Math.random() * (b - a);
+function burst(target, {word, size = 1} = {}){
+  if(calm.matches || !target) return;
+  const r = target.getBoundingClientRect ? target.getBoundingClientRect() : target;
+  const x = r.left + (r.width || 0) / 2, y = r.top + (r.height || 0) / 2;
+  const S = Math.round(190 * size), c = S / 2, n = 12, pts = [];
+  for(let i = 0; i < n * 2; i++){
+    const a = i / (n * 2) * Math.PI * 2 + rnd(-.09, .09), rad = (i % 2 ? rnd(.3, .38) : rnd(.6, .95)) * c;
+    pts.push((c + Math.cos(a) * rad).toFixed(1) + ',' + (c + Math.sin(a) * rad).toFixed(1));
+  }
+  const speed = Array.from({length:10}, (_, i) => {
+    const a = i / 10 * Math.PI * 2 + rnd(-.2, .2), r1 = c * 1.02, r2 = c * rnd(1.18, 1.32);
+    return `<line x1="${(c + Math.cos(a) * r1).toFixed(1)}" y1="${(c + Math.sin(a) * r1).toFixed(1)}" x2="${(c + Math.cos(a) * r2).toFixed(1)}" y2="${(c + Math.sin(a) * r2).toFixed(1)}"/>`;
+  }).join('');
+  const el = document.createElement('div');
+  el.className = 'fx-burst';
+  el.style.cssText = `left:${x}px;top:${y}px;width:${S}px;height:${S}px;--k:${size}`;
+  el.innerHTML = `<svg viewBox="0 0 ${S} ${S}"><g class="speed">${speed}</g><polygon class="star" points="${pts.join(' ')}"/></svg>`;
+  for(let i = 0; i < 5; i++){
+    const a = rnd(0, Math.PI * 2), d = c * rnd(.7, 1.05), p = document.createElement('i');
+    p.className = 'puff';
+    p.style.cssText = `--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d).toFixed(1)}px;--s:${(rnd(.55, 1) * Math.max(.6, size)).toFixed(2)}`;
+    el.appendChild(p);
+  }
+  for(let i = 0; i < 4; i++){
+    const a = rnd(0, Math.PI * 2), d = c * rnd(1.1, 1.5), s = document.createElement('i');
+    s.className = 'shard';
+    s.style.cssText = `--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d).toFixed(1)}px;--r:${Math.round(rnd(90, 320))}deg`;
+    el.appendChild(s);
+  }
+  if(word){
+    const w = document.createElement('b');
+    w.className = 'sfx'; w.textContent = word; w.style.setProperty('--rot', rnd(-14, -6).toFixed(1) + 'deg');
+    el.appendChild(w);
+  }
+  $('fx').appendChild(el);
+  setTimeout(() => el.remove(), 950);
+  if(word && navigator.vibrate) try { navigator.vibrate(8); } catch(e){}
+}
+// squash-and-stretch on press, like a cel drawn on the beat
+function squash(el){
+  if(calm.matches || !el || !el.animate) return;
+  el.animate([{transform:'scale(1)'}, {transform:'scale(1.08,.86)'}, {transform:'scale(.96,1.06)'}, {transform:'scale(1)'}],
+    {duration:380, easing:'cubic-bezier(.34,1.56,.64,1)'});
+}
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest('button, .sel, .shot');
+  if(b && !b.closest('.leaflet-container')) squash(b);
+}, true);
+
+/* ================= PHOTO GUIDES (hand-written layer) ================= */
+// Keyed by the walk they illustrate: 'o:<origin>><station>', '<station>>p:<place>', '<stationA>><stationB>'.
+// kind picks the placeholder drawing until a real photo (src) arrives. spot = a highlight worth a stop.
+// arrow: direction to draw on the photo (u/r/d/l) or {dir, x, y} on a 120x160 grid for real photos.
+const G = (kind, label, cap, extra = {}) => ({kind, label, cap, src:null, date:null, ...extra});
+const GUIDES = {
+  'o:kix>kix': [
+    G('sign', '→', X('ออกจากโถงผู้โดยสารขาเข้า แล้วตามป้ายไปสถานีรถไฟ', 'Leave the arrivals hall and follow the signs to the railway station', '到着ロビーを出て、鉄道駅の案内に沿って進む'), {arrow:'u'}),
+    G('street', '2F', X('สถานีเชื่อมกับอาคารผู้โดยสารที่ชั้น 2 เดินข้ามทางเชื่อมไป', 'The station connects to the terminal on the 2nd floor; cross the walkway', '駅はターミナル2階とつながっています。連絡通路を渡る'), {arrow:'u'}),
+    G('gate', 'NK | JR', X('ประตู Nankai (ป้ายแดง) กับ JR (ป้ายน้ำเงิน) อยู่ติดกัน เลือกให้ตรงกับเส้นทาง', 'Nankai (red sign) and JR (blue sign) gates are side by side; pick the one for your route', '南海（赤い看板）とJR（青い看板）の改札が並んでいます。ルートに合う方へ'))
+  ],
+  'o:namba>namba': [
+    G('gate', 'NK', X('ออกจากประตูตั๋ว Nankai', 'Exit through the Nankai ticket gates', '南海の改札を出る')),
+    G('sign', 'M', X('มองหาป้ายวงกลมแดง “M” แล้วเดินตามไป', 'Look for the red circle “M” signs and follow them', '赤い丸の「M」の案内を探して進む'), {arrow:'u'}),
+    G('stairs', 'B1', X('ลงไปชั้นใต้ดิน', 'Go down to the basement level', '地下へ降りる'), {arrow:'d'}),
+    G('gate', 'M', X('ถึงประตูตั๋วสาย Midosuji ทั้งหมดราว 7 นาที', 'Midosuji Line ticket gates, about 7 min in total', '御堂筋線の改札へ。全体で約7分'))
+  ],
+  'namba>p:dotonbori': [
+    G('sign', '14', X('ตามป้ายทางออก 14', 'Follow the signs for Exit 14', '14番出口の案内に沿って進む'), {arrow:'u'}),
+    G('street', 'N ↑', X('ขึ้นมาถึงถนนแล้วเดินไปทางเหนือ', 'Come up to the street and head north', '地上に出たら北へ'), {arrow:'u'}),
+    G('spot', '★', X('สะพาน Ebisubashi กับป้ายกูลิโกะ จุดถ่ายรูปยอดฮิต', 'Ebisubashi Bridge and the Glico sign: the classic photo spot', '戎橋とグリコサイン。定番の撮影スポット'), {spot:true})
+  ],
+  'tani4>p:castle': [
+    G('sign', '9 / 1-B', X('ทางออก 9 (ฝั่งสาย Chuo) หรือ 1-B (ฝั่งสาย Tanimachi)', 'Exit 9 (Chuo Line side) or 1-B (Tanimachi Line side)', '9番出口（中央線側）または1-B出口（谷町線側）'), {arrow:'u'}),
+    G('street', '→ 7′', X('ขึ้นถึงถนน เดินไปประตู Otemon ราว 7 นาที', 'Up at street level, about 7 min to Otemon Gate', '地上に出て大手門まで約7分'), {arrow:'u'}),
+    G('gate', '大手門', X('เข้าประตู Otemon', 'Enter through Otemon Gate', '大手門から入る')),
+    G('spot', '★', X('ตัวปราสาท (Tenshukaku) เดินต่อจากประตูราว 10 นาที', 'The main tower (Tenshukaku), about 10 min on from the gate', '天守閣。門から約10分'), {spot:true})
+  ]
+};
+const guideKey = s => s.kind === 'to' ? `o:${ORIGIN.id}>${s.st}`
+  : s.kind === 'last' ? `${s.st}>p:${s.place.id}`
+  : s.kind === 'transfer' ? `${s.from}>${s.st}`
+  : s.kind === 'direct' ? `o:${ORIGIN.id}>p:${s.place.id}` : null;
+
+Object.assign(UI.th, {photos:n => `${n} รูป`, sample:'รูปตัวอย่าง · รอรูปจริง', shotOn:d => `ถ่ายเมื่อ ${d}`, stop:'แวะได้', close:'ปิด', prev:'ก่อนหน้า', next:'ถัดไป'});
+Object.assign(UI.en, {photos:n => `${n} photo${n > 1 ? 's' : ''}`, sample:'Sample image · real photo coming', shotOn:d => `Taken ${d}`, stop:'Worth a stop', close:'Close', prev:'Previous', next:'Next'});
+Object.assign(UI.ja, {photos:n => `写真${n}枚`, sample:'サンプル画像・実際の写真は準備中', shotOn:d => `撮影：${d}`, stop:'寄り道', close:'閉じる', prev:'前へ', next:'次へ'});
+
+// placeholder drawings on a 120x160 (3:4, portrait) grid, in the same ink-and-lavender style as the rest of the UI
+const INK = '#1d1a4a';
+const ROT = {r:0, d:90, l:180, u:-90};
+function arrowSvg(a, x = 60, y = 128){
+  if(!a) return '';
+  const o = typeof a === 'string' ? {dir:a, x, y} : a;
+  return `<g transform="translate(${o.x} ${o.y}) rotate(${ROT[o.dir] || 0})"><path d="M-20 -7H3V-18L22 0L3 18V7H-20Z" fill="#ff5fa8" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/></g>`;
+}
+function art(g){
+  const L = g.label || '', fs = L.length > 4 ? 13 : L.length > 2 ? 16 : 22;
+  const text = (x, y, fill = INK, size = fs) => `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" font-weight="800" fill="${fill}">${L}</text>`;
+  let s = `<rect width="120" height="160" fill="#ecebf8"/><rect y="112" width="120" height="48" fill="#dcdaf0"/>`;
+  if(g.kind === 'sign') s += `<rect x="56" y="12" width="8" height="26" fill="${INK}"/><rect x="14" y="34" width="92" height="40" rx="6" fill="#ffd23f" stroke="${INK}" stroke-width="3"/>${text(60, 61)}`;
+  else if(g.kind === 'gate') s += `<rect x="20" y="20" width="80" height="26" rx="5" fill="${INK}"/>${text(60, 39, '#fff', Math.min(fs, 15))}`
+    + [0, 1, 2].map(i => `<rect x="${12 + i * 36}" y="66" width="24" height="48" rx="4" fill="#fff" stroke="${INK}" stroke-width="3"/><rect x="${16 + i * 36}" y="72" width="16" height="8" rx="2" fill="${i === 1 ? '#7fe0b3' : '#ff8fc0'}"/>`).join('');
+  else if(g.kind === 'stairs') s += `<polygon points="8,150 8,132 30,132 30,114 52,114 52,96 74,96 74,78 96,78 96,60 112,60 112,150" fill="#fff" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><rect x="14" y="16" width="52" height="30" rx="5" fill="${INK}"/>${text(40, 37, '#fff', Math.min(fs, 16))}`;
+  else if(g.kind === 'street') s += `<rect x="2" y="26" width="34" height="88" fill="#fff" stroke="${INK}" stroke-width="3"/><rect x="84" y="14" width="34" height="100" fill="#fff" stroke="${INK}" stroke-width="3"/><polygon points="46,82 74,82 116,160 4,160" fill="#b8b3ff" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M60 92V104M60 114V128M60 138V156" stroke="#fff" stroke-width="3"/><rect x="40" y="40" width="40" height="24" rx="5" fill="#ffd23f" stroke="${INK}" stroke-width="3"/>${text(60, 57, INK, Math.min(fs, 13))}`;
+  else s += `<polygon points="60,22 72,52 104,54 79,74 88,106 60,88 32,106 41,74 16,54 48,52" fill="#ff8fc0" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>`;
+  return s + (g.kind === 'spot' ? '' : arrowSvg(g.arrow));
+}
+// a photo cell: the real image when there is one, otherwise the drawing; the arrow overlay is shared
+const photoHtml = g => g.src
+  ? `<img src="${g.src}" alt="" loading="lazy"><svg class="ov" viewBox="0 0 120 160" preserveAspectRatio="xMidYMid slice">${arrowSvg(g.arrow)}</svg>`
+  : `<svg viewBox="0 0 120 160" preserveAspectRatio="xMidYMid slice">${art(g)}</svg>`;
+function shotsHtml(key){
+  const list = GUIDES[key]; if(!list) return '';
+  return `<div class="shots">${list.map((g, i) => `<button class="shot" data-shot="${key}" data-i="${i}" aria-label="${tr(g.cap)}">
+      <span class="ph">${photoHtml(g)}<span class="no">${i + 1}</span>${g.spot ? `<span class="stop">${t('stop')}</span>` : ''}</span>
+      <span class="cap">${tr(g.cap)}</span></button>`).join('')}</div>`;
+}
+
+/* ---------- full-screen viewer: swipe between photos; phone back button closes it ---------- */
+const VIEW = {key:null, i:0};
+function openViewer(key, i, title){
+  const list = GUIDES[key]; if(!list) return;
+  VIEW.key = key; VIEW.i = i;
+  $('vTitle').textContent = title || '';
+  $('vTrack').innerHTML = list.map((g, n) => `<figure class="slide">
+      <div class="pic">${photoHtml(g)}${g.spot ? `<span class="stop">${t('stop')}</span>` : ''}</div>
+      <figcaption class="vcap"><span class="no">${n + 1}</span><span><b>${tr(g.cap)}</b><small>${g.date ? t('shotOn', g.date) : t('sample')}</small></span></figcaption>
+    </figure>`).join('');
+  $('vDots').innerHTML = list.map(() => '<i></i>').join('');
+  $('vClose').setAttribute('aria-label', t('close'));
+  $('vPrev').setAttribute('aria-label', t('prev')); $('vNext').setAttribute('aria-label', t('next'));
+  $('viewer').hidden = false;
+  $('vTrack').scrollLeft = i * $('vTrack').clientWidth;
+  syncViewer();
+  try { history.pushState({viewer:1}, ''); } catch(e){}
+  $('vClose').focus({preventScroll:true});
+}
+function syncViewer(){
+  const tr_ = $('vTrack'), n = GUIDES[VIEW.key].length;
+  VIEW.i = Math.max(0, Math.min(n - 1, Math.round(tr_.scrollLeft / Math.max(1, tr_.clientWidth))));
+  $('vCount').textContent = `${VIEW.i + 1} / ${n}`;
+  [...$('vDots').children].forEach((d, k) => d.classList.toggle('on', k === VIEW.i));
+  $('vPrev').disabled = VIEW.i === 0; $('vNext').disabled = VIEW.i === n - 1;
+}
+function goViewer(d){ const tr_ = $('vTrack'); tr_.scrollTo({left:(VIEW.i + d) * tr_.clientWidth, behavior:calm.matches ? 'auto' : 'smooth'}); }
+function hideViewer(){ $('viewer').hidden = true; VIEW.key = null; }
+function closeViewer(){ if(history.state && history.state.viewer) history.back(); else hideViewer(); }
+addEventListener('popstate', () => { if(VIEW.key) hideViewer(); });
+$('vTrack').addEventListener('scroll', () => { if(VIEW.key) syncViewer(); }, {passive:true});
+$('vClose').addEventListener('click', closeViewer);
+$('vPrev').addEventListener('click', () => goViewer(-1));
+$('vNext').addEventListener('click', () => goViewer(1));
+$('viewer').addEventListener('click', e => { if(e.target === $('viewer') || e.target.classList.contains('slide')) closeViewer(); });
+addEventListener('keydown', e => {
+  if(!VIEW.key) return;
+  if(e.key === 'Escape') closeViewer();
+  if(e.key === 'ArrowRight') goViewer(1);
+  if(e.key === 'ArrowLeft') goViewer(-1);
+});
+addEventListener('resize', () => { if(VIEW.key) $('vTrack').scrollLeft = VIEW.i * $('vTrack').clientWidth; });
+
 /* ================= BOTTOM SHEET (phone) ================= */
 // Three resting heights: peek (header only), half, full. Drag the handle or the header; tap the handle to toggle.
 const SHEET = {snap:'half'};
@@ -622,7 +844,9 @@ const pinIcon = (p, cls='') => L.divIcon({className:'', iconSize:[36,36], iconAn
   html:`<div class="pin ${cls}" style="--c:${CATS[p.cat].color}">${svg(CATS[p.cat].icon)}<span>${pn(p)}</span></div>`});
 const markers = {};
 PLACES.forEach(p => {
-  markers[p.id] = L.marker(p.ll, {icon:pinIcon(p)}).addTo(map).on('click', () => selectPlace(p.id));
+  markers[p.id] = L.marker(p.ll, {icon:pinIcon(p)}).addTo(map).on('click', ev => {
+    const pt = ev.containerPoint; burst({left:pt.x, top:pt.y}, {word:'ドン!'}); selectPlace(p.id);
+  });
 });
 // tapping empty map on a phone lowers the sheet so the map is easier to see
 map.on('click', () => { closeMenus(); if(isMobile() && SHEET.snap !== 'peek') setSheet('peek'); });
@@ -747,9 +971,10 @@ function stepRow(s){
     : s.kind === 'direct' ? t('walkFrom', on, s.km)
     : tr(s.text) || t('walkTo', pn(s.place));
   const tip = s.t === 'taxi' ? t('taxiTip') : tr(s.tip);
+  const key = s.t === 'walk' ? guideKey(s) : null, shots = key && GUIDES[key];
   return `<div class="step ${s.t}"><div class="lane"><span class="node"></span><span class="bar"></span></div>
-    <div class="body"><div class="hd">${text}</div><div class="meta">${t(s.t==='taxi' ? 'rideFor' : 'walkFor', s.min)}</div>
-      ${tip?`<span class="tip">${tip}</span>`:''}</div></div>`;
+    <div class="body"><div class="hd">${text}</div><div class="meta">${t(s.t==='taxi' ? 'rideFor' : 'walkFor', s.min)}${shots ? `<span class="cam">📷 ${t('photos', shots.length)}</span>` : ''}</div>
+      ${tip?`<span class="tip">${tip}</span>`:''}${shots ? shotsHtml(key) : ''}</div></div>`;
 }
 
 /* ================= ACTIONS ================= */
@@ -807,15 +1032,18 @@ $('q').addEventListener('keydown', e => {
   if(e.key === 'Escape'){ closeMenus(); $('q').blur(); }
 });
 $('clear').addEventListener('click', e => { e.preventDefault(); clearPlace(); });
-$('suggest').addEventListener('mousedown', e => { const li = e.target.closest('li[data-place]'); if(li){ e.preventDefault(); selectPlace(li.dataset.place); $('q').blur(); } });
-$('lang').addEventListener('change', e => setLang(e.target.value));
-$('panel').addEventListener('change', e => { if(e.target.id === 'origin') setOrigin(e.target.value); });
+$('suggest').addEventListener('mousedown', e => { const li = e.target.closest('li[data-place]'); if(li){ e.preventDefault(); burst(li, {word:'ドン!', size:.8}); selectPlace(li.dataset.place); $('q').blur(); } });
+$('lang').addEventListener('change', e => { burst(e.target.closest('.sel'), {word:'ペラッ', size:.6}); setLang(e.target.value); });
+$('panel').addEventListener('change', e => { if(e.target.id === 'origin'){ burst(e.target.closest('.sel'), {word:'パッ', size:.6}); setOrigin(e.target.value); } });
 $('panel').addEventListener('click', e => {
   const cat = e.target.closest('[data-cat]'), pl = e.target.closest('[data-place]'), rt = e.target.closest('[data-route]');
-  if(cat){ if(cat.dataset.cat !== state.cat){ state.cat = cat.dataset.cat; syncMarkers(); renderPanel(); fitAll(); } }
-  else if(pl) selectPlace(pl.dataset.place);
-  else if(rt){ state.route = +rt.dataset.route; const top = $('pbody').scrollTop; renderPanel(); $('pbody').scrollTop = top; drawRoute(); }
-  else if(e.target.closest('[data-back]')) clearPlace();
+  const shot = e.target.closest('[data-shot]'), back = e.target.closest('[data-back]');
+  if(shot){ burst(shot, {word:'パシャ', size:.6}); openViewer(shot.dataset.shot, +shot.dataset.i, shot.closest('.step').querySelector('.hd').textContent); }
+  else if(cat){ if(cat.dataset.cat !== state.cat){ burst(cat, {size:.4}); state.cat = cat.dataset.cat; syncMarkers(); renderPanel(); fitAll(); } }
+  else if(pl){ burst(pl, {word:'ドン!'}); selectPlace(pl.dataset.place); }
+  else if(rt){ if(+rt.dataset.route !== state.route) burst(rt, {word:'シュッ', size:.75});
+    state.route = +rt.dataset.route; const top = $('pbody').scrollTop; renderPanel(); $('pbody').scrollTop = top; drawRoute(); }
+  else if(back){ burst(back, {size:.4}); clearPlace(); }
   else if(isMobile() && e.target.closest('.grab')) setSheet(SHEET.snap === 'half' ? 'full' : 'half');
 });
 document.addEventListener('mousedown', e => { if(!e.target.closest('#search')) closeMenus(); });
