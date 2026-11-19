@@ -2,46 +2,89 @@
 //   node tools/build-network.mjs
 // Output is the auto-generated "network layer": stations (names, coordinates), lines (station order,
 // straight-line segment distance) and numbered station exits. Hand-checked values (minutes, real track km,
-// direction signs, tips, photos) live in index.html and override these.
+// direction signs, tips, photos, fares) live in index.html and override these.
 // Map data © OpenStreetMap contributors, ODbL 1.0 — https://www.openstreetmap.org/copyright
 import {writeFileSync, mkdirSync} from 'node:fs';
 
 const OVERPASS = 'https://overpass-api.de/api/interpreter';
 
-// One relation per line, in the direction the app treats as "forward" (dir 1).
-// Relation IDs are stable; re-check them if OSM editors split or replace a route.
-const LINES = {
-  midosuji:    {rel:2411153, note:'Esaka → Nakamozu'},
-  tanimachi:   {rel:444907,  note:'Dainichi → Yao-Minami'},
-  yotsubashi:  {rel:8028854, note:'Nishi-Umeda → Suminoekoen'},
-  chuo:        {rel:444881,  note:'Yumeshima → Nagata'},
-  sennichimae: {rel:444891,  note:'Nodahanshin → Minami-Tatsumi'},
-  sakaisuji:   {rel:444905,  note:'Tenjinbashisuji 6-chome → Tengachaya'},
-  nagahori:    {rel:444878,  note:'Taisho → Kadoma-Minami'},
-  imazatosuji: {rel:8028827, note:'Itakano → Imazato'}
-  // New Tram (Nanko Port Town Line, rel 444913) left out: in OSM it lists only 7 of its 10 stops and two have no name.
+// Areas lines are clipped to (south, west, north, east). Kyoto, Nara and Kobe come later with checked fares.
+const AREA = {
+  osaka: [34.55, 135.38, 34.78, 135.62],
+  airport: [34.38, 135.22, 34.78, 135.62]       // Osaka + the Kansai Airport corridor
 };
 
-// OSM spelling fixes, and IDs the app already uses for these stations
-const FIX = {
-  'Shitannoji-mae Yuhigaoka': 'Shitennoji-mae Yuhigaoka',
-  'Tenjinbashisuji-rokuchome': 'Tenjinbashisuji 6-chome',
-  'Minami-morimachi': 'Minami-Morimachi',
-  'Cosmo Square': 'Cosmosquare'
+// One OSM route relation per line or train type. Relation IDs are stable; re-check if OSM editors replace a route.
+// op = fare operator. area = clip to that box (keeps the longest run of stops inside). from = drop stops before it.
+const LINES = {
+  // Osaka Metro (whole lines)
+  midosuji:    {rel:2411153, op:'metro'},
+  tanimachi:   {rel:444907,  op:'metro'},
+  yotsubashi:  {rel:8028854, op:'metro'},
+  chuo:        {rel:444881,  op:'metro'},
+  sennichimae: {rel:444891,  op:'metro'},
+  sakaisuji:   {rel:444905,  op:'metro'},
+  nagahori:    {rel:444878,  op:'metro'},
+  imazatosuji: {rel:8028827, op:'metro'},
+  // New Tram (rel 444913) left out: in OSM it lists only 7 of its 10 stops and two have no name.
+
+  // JR West
+  jrLoop:      {rel:10073682, op:'jr', loop:true},      // outer loop (clockwise)
+  jrYume:      {rel:6088924,  op:'jr'},
+  jrKyoto:     {rel:11808754, op:'jr', area:'osaka'},   // local, Kyoto → Osaka
+  jrKobe:      {rel:16784421, op:'jr', area:'osaka'},
+  jrTozai:     {rel:11816511, op:'jr'},
+  jrYamatoji:  {rel:11810048, op:'jr', area:'osaka'},
+  jrHigashi:   {rel:3344075,  op:'jr', area:'osaka'},
+  jrAir:       {rel:18630327, op:'jr', area:'airport'},  // Kansai Airport Rapid
+  // Nankai
+  nankai:      {rel:11930463, op:'nankai', area:'osaka'},   // main line local
+  nankaiAir:   {rel:18668905, op:'nankai', area:'airport'}, // Airport Express
+  rapit:       {rel:18673505, op:'nankai', area:'airport'}, // Rapi:t α
+  // Hanshin
+  hanshin:     {rel:11923501, op:'hanshin'},                 // Namba Line (relation lists both directions)
+  hanshinMain: {rel:11658109, op:'hanshin', area:'osaka'},
+  // Hankyu
+  hankyuKyoto: {rel:10255877, op:'hankyu', area:'osaka'},
+  hankyuKobe:  {rel:11966252, op:'hankyu', area:'osaka'},
+  hankyuTakarazuka: {rel:11982564, op:'hankyu', area:'osaka'},
+  hankyuSenri: {rel:1872144,  op:'hankyu', area:'osaka'},
+  // Kintetsu
+  kintetsuNara:  {rel:18665645, op:'kintetsu', area:'osaka', from:'Osaka Namba'},  // rapid express, Osaka part
+  kintetsuOsaka: {rel:11962196, op:'kintetsu', area:'osaka'},
+  kintetsuMinami:{rel:11942103, op:'kintetsu', area:'osaka'}
+  // Keihan main line: no route relation in OSM yet (only the Uji and Katano branches) — to be written by hand.
 };
+
+// English names for stops that have none in OSM, and spelling fixes
+const JA_EN = {
+  '大阪梅田':'Osaka-Umeda', '福島':'Fukushima', '淀川':'Yodogawa', '千船':'Chibune', '杭瀬':'Kuise', '尼崎':'Amagasaki',
+  '西九条':'Nishikujo', '熊取':'Kumatori', '堺市':'Sakaishi', 'JR淡路':'JR-Awaji', '川西能勢口':'Kawanishi-Noseguchi',
+  '吹田':'Suita', '長岡京駅2番のりば':'Nagaokakyo', '長岡京駅1番のりば':'Nagaokakyo'
+};
+const FIX = {
+  'Shitannoji-mae Yuhigaoka': 'Shitennoji-mae Yuhigaoka', 'Tenjinbashisuji-rokuchome': 'Tenjinbashisuji 6-chome',
+  'Minami-morimachi': 'Minami-Morimachi', 'Cosmo Square': 'Cosmosquare', 'Shin-Imaimiya': 'Shin-Imamiya',
+  'Kishinosato-tamade': 'Kishinosato-Tamade', 'Rinku Town': 'Rinku Town'
+};
+// station IDs the app already uses, and same-name stations of different companies kept apart
 const ID = {
   'Tanimachi 4-chome': 'tani4', 'Tanimachi 6-chome': 'tani6', 'Tanimachi 9-chome': 'tani9',
-  'Shitennoji-mae Yuhigaoka': 'shitennojimae', 'Dobutsuen-mae': 'dobutsuen',
-  'Tenjinbashisuji 6-chome': 'tenroku', 'Gamo 4-chome': 'gamo4', 'Zuiko 4-chome': 'zuiko4'
+  'Shitennoji-mae Yuhigaoka': 'shitennojimae', 'Dobutsuen-mae': 'dobutsuen', 'Tenjinbashisuji 6-chome': 'tenroku',
+  'Gamo 4-chome': 'gamo4', 'Zuiko 4-chome': 'zuiko4', 'Kansai Airport': 'kix', 'Osaka Namba': 'osakaNamba',
+  'nankai:Namba': 'nankaiNamba', 'hankyu:Osaka-Umeda': 'hankyuUmeda', 'hanshin:Osaka-Umeda': 'hanshinUmeda',
+  'hanshin:Amagasaki': 'hanshinAmagasaki', 'hankyu:Suita': 'hankyuSuita', 'hankyu:Nakatsu': 'hankyuNakatsu', 'kintetsu:Kintetsu-Nippombashi': 'nippombashi', 'Osaka Uehommachi': 'uehommachi',
+  'Osaka Abenobashi': 'abenobashi'
 };
 const fold = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 const clean = s => { s = fold(s.split(';').pop()).replace(/\s+/g, ' ').trim(); return FIX[s] || s; };
-const slug = s => ID[s] || s.split(/[^A-Za-z0-9]+/).filter(Boolean)
+const slug = (s, op) => ID[`${op}:${s}`] || ID[s] || s.split(/[^A-Za-z0-9]+/).filter(Boolean)
   .map((w, i) => i ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()).join('');
 
 const hav = (a, b) => { const R = 6371, r = Math.PI / 180, dLa = (b[0] - a[0]) * r, dLo = (b[1] - a[1]) * r;
   const h = Math.sin(dLa / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
 const r4 = x => Math.round(x * 1e4) / 1e4;
+const inside = (n, box) => n.lat >= box[0] && n.lon >= box[1] && n.lat <= box[2] && n.lon <= box[3];
 
 async function overpass(q){
   for(let attempt = 1; attempt <= 4; attempt++){
@@ -54,7 +97,7 @@ async function overpass(q){
 }
 
 const ids = Object.values(LINES).map(l => l.rel).join(',');
-const els = await overpass(`[out:json][timeout:120];
+const els = await overpass(`[out:json][timeout:180];
 relation(id:${ids})->.r; .r out body;
 node(r.r)->.n; .n out body;
 node(r.r:"stop")->.s;
@@ -65,22 +108,37 @@ const nodes = Object.fromEntries(els.filter(e => e.type === 'node').map(e => [e.
 const stations = {}, lines = {}, pos = {};
 for(const [id, cfg] of Object.entries(LINES)){
   const rel = rels[cfg.rel]; if(!rel) throw new Error(`relation ${cfg.rel} (${id}) missing`);
-  const stops = rel.members.filter(m => m.type === 'node' && /^stop/.test(m.role)).map(m => nodes[m.ref]).filter(Boolean);
-  const st = [];
-  for(const n of stops){
-    const t = n.tags || {}, en = clean(t['name:en'] || t['name:ja-Latn'] || t.name || ''), sid = slug(en);
-    if(!sid) throw new Error(`${id}: stop node ${n.id} has no usable English name`);
-    (pos[sid] = pos[sid] || []).push([n.lat, n.lon]);
-    stations[sid] = stations[sid] || {n:en, ja:(t['name:ja'] || t.name || '').replace(/駅$/, '')};
-    if(st[st.length - 1] !== sid) st.push(sid);
+  let stops = rel.members.filter(m => m.type === 'node' && /^stop/.test(m.role)).map(m => nodes[m.ref]).filter(Boolean);
+  const named = stops.map(n => { const t = n.tags || {}, raw = t['name:en'] || t['name:ja-Latn'] || JA_EN[t.name] || '';
+    const en = clean(raw); if(!en) throw new Error(`${id}: stop "${t.name}" (${n.id}) has no English name; add it to JA_EN`);
+    return {n, en, ja:(t['name:ja'] || t.name || '').replace(/駅$/, '').replace(/駅\d番のりば$/, ''), sid:slug(en, cfg.op)}; });
+  let run = named;
+  // relation that lists both directions: stop at the first station seen twice
+  const seen = new Set(); const cut = run.findIndex(s => seen.has(s.sid) || !seen.add(s.sid));
+  if(cut > 0 && !cfg.loop) run = run.slice(0, cut);
+  if(cfg.from){ const k = run.findIndex(s => s.en === cfg.from); if(k < 0) throw new Error(`${id}: from ${cfg.from} not found`); run = run.slice(k); }
+  if(cfg.area){   // longest run of consecutive stops inside the area
+    let best = [], cur = [];
+    for(const s of run){ if(inside(s.n, AREA[cfg.area])) cur.push(s); else { if(cur.length > best.length) best = cur; cur = []; } }
+    run = cur.length > best.length ? cur : best;
   }
+  const st = [];
+  for(const s of run){
+    (pos[s.sid] = pos[s.sid] || []).push([s.n.lat, s.n.lon]);
+    stations[s.sid] = stations[s.sid] || {n:s.en, ja:s.ja};
+    if(st[st.length - 1] !== s.sid) st.push(s.sid);
+  }
+  if(cfg.loop && st.length > 2 && st[0] === st[st.length - 1]) st.pop();
   if(st.length < 2) throw new Error(`${id}: only ${st.length} stops`);
-  lines[id] = {st, colour:rel.tags.colour || null, ref:rel.tags.ref || null};
+  lines[id] = {st, op:cfg.op, loop:!!cfg.loop, colour:rel.tags.colour || null, ref:rel.tags.ref || null};
 }
 // a station's position = average of its stop nodes across lines
 for(const [sid, ps] of Object.entries(pos)) stations[sid].ll = [r4(ps.reduce((a, p) => a + p[0], 0) / ps.length), r4(ps.reduce((a, p) => a + p[1], 0) / ps.length)];
 // straight-line distance per segment, x1.15 for curves (hand-checked track km override this in the app)
-for(const l of Object.values(lines)) l.km = l.st.slice(1).map((s, i) => Math.round(hav(stations[l.st[i]].ll, stations[s].ll) * 1.15 * 10) / 10);
+for(const l of Object.values(lines)){
+  const segs = l.loop ? l.st.length : l.st.length - 1;
+  l.km = Array.from({length:segs}, (_, i) => Math.round(hav(stations[l.st[i]].ll, stations[l.st[(i + 1) % l.st.length]].ll) * 1.15 * 10) / 10);
+}
 
 // numbered exits, attached to the nearest station within 400 m
 const exits = {};
@@ -99,4 +157,4 @@ writeFileSync(new URL('../data/osaka-network.js', import.meta.url),
   `// AUTO-GENERATED by tools/build-network.mjs — do not edit by hand.\n// Map data © OpenStreetMap contributors, ODbL 1.0.\n` +
   `window.NETWORK = window.NETWORK || {};\nwindow.NETWORK.osaka = ${JSON.stringify(out)};\n`);
 console.log(`stations ${Object.keys(stations).length}, lines ${Object.keys(lines).length}, exits ${Object.values(exits).reduce((a, l) => a + l.length, 0)}`);
-for(const [id, l] of Object.entries(lines)) console.log(id.padEnd(12), l.st.length, 'stops:', l.st.join(' '));
+for(const [id, l] of Object.entries(lines)) console.log(id.padEnd(16), String(l.st.length).padStart(2), l.st.join(' '));

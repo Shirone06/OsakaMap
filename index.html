@@ -541,7 +541,8 @@ const WALKS = [
   ['namba','nambaBus',3], ['nankaiNamba','nippombashi',8], ['osaka','umeda',5], ['osaka','higashiUmeda',6],
   ['umeda','higashiUmeda',6], ['shinImamiya','dobutsuen',6]
 ];
-const OP = {metro:X('Metro','Metro','地下鉄'), jr:'JR', nankai:X('Nankai','Nankai','南海'), hanshin:X('Hanshin','Hanshin','阪神'), bus:X('รถบัส','Bus','バス')};
+const OP = {metro:X('Metro','Metro','地下鉄'), jr:'JR', nankai:X('Nankai','Nankai','南海'), hanshin:X('Hanshin','Hanshin','阪神'), bus:X('รถบัส','Bus','バス'),
+  hankyu:X('Hankyu','Hankyu','阪急'), kintetsu:X('Kintetsu','Kintetsu','近鉄')};
 // Fare tables per operator (checked Nov 2026). k = distance in km, air = trip touches Kansai Airport
 const FARE = {
   metro:k => k<=3?190 : k<=7?240 : k<=13?290 : k<=19?340 : 390,
@@ -549,7 +550,21 @@ const FARE = {
       : k<=35?580 : k<=40?660 : k<=45?750 : k<=50?840 : k<=60?960 : 1120) + (air ? 220 : 0); },
   nankai:(k, air) => { k = Math.ceil(k - 1e-9); return (k<=3?180 : k<=7?240 : k<=11?290 : k<=15?370 : k<=19?420 : k<=23?490 : k<=27?540
       : k<=31?610 : k<=35?650 : k<=39?690 : k<=44?740 : k<=49?790 : k<=54?850 : 880) + (air ? 230 : 0); },
-  hanshin:() => 220,
+  // Hanshin: normal / with the Namba Line surcharge (any ride on Nishikujo–Osaka-Namba)
+  hanshin:(k, air, grp) => { k = Math.ceil(k - 1e-9);
+    const row = [[4,160,220],[8,200,290],[13,250,340],[18,280,370],[24,300,390],[30,320,410],[34,330,420]].find(x => k <= x[0]) || [99,330,420];
+    const st = LINES.hanshin.st, cut = st.indexOf('nishikujo');
+    const namba = (grp || []).some(s => s.line === 'hanshin' && Math.min(st.indexOf(s.from), st.indexOf(s.to)) < cut);
+    return namba ? row[2] : row[1]; },
+  hankyu:(k, air, grp) => {
+    if(grp && grp.length){ const a = grp[0].from, z = grp[grp.length - 1].to, ends = [a, z];
+      if(ends.includes('hankyuUmeda') && (ends.includes('juso') || ends.includes('hankyuNakatsu'))) k += .4; }   // old Umeda station rule
+    k = Math.ceil(k - 1e-9);
+    return ([[4,170],[9,200],[14,240],[19,280],[26,290],[33,330],[42,390],[51,410],[60,480],[70,540]].find(x => k <= x[0]) || [0,640])[1]; },
+  kintetsu:k => { k = Math.ceil(k - 1e-9);
+    return ([[3,180],[6,240],[10,300],[14,360],[18,430],[22,490],[26,530],[30,590],[35,680],[40,760],[45,830],[50,910]].find(x => k <= x[0]) || [0,990])[1]; },
+  keihan:k => { k = Math.ceil(k - 1e-9);   // since 2025-10-01; Oto / Nakanoshima line surcharges not modelled yet
+    return ([[3,180],[7,240],[12,320],[17,360],[22,400],[28,420],[34,440],[40,460],[46,480],[52,490]].find(x => k <= x[0]) || [0,500])[1]; },
   bus:() => 210
 };
 const CATS = {
@@ -615,12 +630,46 @@ const pSub = p => (LANG === 'th' ? [p.name.en, p.name.ja] : LANG === 'en' ? [p.n
 // The generated file gives every Osaka Metro station and line in order. Hand-checked values in this file win:
 // station names, minutes and track km we verified are spread over the generated segments they cover.
 const NET = (window.NETWORK || {}).osaka;
+const NL = (th, en, ja, code, color, more) => ({name:X(th, en, ja), code, color, ...more});
 const NEW_LINES = {
-  yotsubashi:{name:X('Osaka Metro สาย Yotsubashi','Osaka Metro Yotsubashi Line','Osaka Metro 四つ橋線'), code:'Y'},
-  nagahori:{name:X('Osaka Metro สาย Nagahori Tsurumi-ryokuchi','Osaka Metro Nagahori Tsurumi-ryokuchi Line','Osaka Metro 長堀鶴見緑地線'), code:'N'},
-  imazatosuji:{name:X('Osaka Metro สาย Imazatosuji','Osaka Metro Imazatosuji Line','Osaka Metro 今里筋線'), code:'I'}
+  yotsubashi:NL('Osaka Metro สาย Yotsubashi','Osaka Metro Yotsubashi Line','Osaka Metro 四つ橋線','Y','#0078be'),
+  nagahori:NL('Osaka Metro สาย Nagahori Tsurumi-ryokuchi','Osaka Metro Nagahori Tsurumi-ryokuchi Line','Osaka Metro 長堀鶴見緑地線','N','#8cb43c'),
+  imazatosuji:NL('Osaka Metro สาย Imazatosuji','Osaka Metro Imazatosuji Line','Osaka Metro 今里筋線','I','#ee7b1a'),
+  jrKobe:NL('JR Kobe Line','JR Kobe Line','JR神戸線','JR','#0072bc'),
+  jrTozai:NL('JR Tozai Line','JR Tozai Line','JR東西線','JR','#e4007f'),
+  jrYamatoji:NL('JR Yamatoji Line','JR Yamatoji Line','JR大和路線','JR','#00a95f'),
+  jrHigashi:NL('JR Osaka Higashi Line','JR Osaka Higashi Line','JRおおさか東線','JR','#3a4ba0'),
+  // Rapi:t α: KIX → Namba about 35–39 min (Wikipedia / Nankai); segment minutes set by hand, the estimate is far too slow
+  rapit:NL('Nankai Rapi:t (ด่วนพิเศษ)','Nankai Rapi:t limited express','南海 特急ラピート','NK','#2b5aa8', {extra:700, minFix:[6,2,23,3,3],
+    tip:X('ต้องซื้อตั๋วที่นั่ง Rapi:t เพิ่ม ¥700 · ตั๋วดิจิทัลรวมค่าโดยสาร ¥1,410 ถูกกว่า','Needs a Rapi:t seat ticket (+¥700); the ¥1,410 digital ticket incl. fare is cheaper','特急券+¥700が必要。運賃込みデジタルきっぷ¥1,410がお得')}),
+  hanshinMain:NL('Hanshin Main Line','Hanshin Main Line','阪神本線','HS','#00a0e9'),
+  hankyuKyoto:NL('Hankyu Kyoto Line','Hankyu Kyoto Line','阪急京都線','HK','#8c1d18'),
+  hankyuKobe:NL('Hankyu Kobe Line','Hankyu Kobe Line','阪急神戸線','HK','#8c1d18'),
+  hankyuTakarazuka:NL('Hankyu Takarazuka Line','Hankyu Takarazuka Line','阪急宝塚線','HK','#8c1d18'),
+  hankyuSenri:NL('Hankyu Senri Line','Hankyu Senri Line','阪急千里線','HK','#8c1d18'),
+  kintetsuNara:NL('Kintetsu Nara Line (Rapid Express)','Kintetsu Nara Line (Rapid Express)','近鉄奈良線（快速急行）','KT','#e2041b'),
+  kintetsuOsaka:NL('Kintetsu Osaka Line','Kintetsu Osaka Line','近鉄大阪線','KT','#e2041b'),
+  kintetsuMinami:NL('Kintetsu Minami-Osaka Line','Kintetsu Minami-Osaka Line','近鉄南大阪線','KT','#e2041b')
 };
-const estMin = km => Math.max(1, Math.round(.6 + 1.5 * km));   // subway: ~1.5 min per km + dwell
+const estMin = (km, op) => Math.max(1, Math.round(op === 'metro' ? .6 + 1.5 * km : .8 + 1.2 * km));   // rough: ~1.5 min/km subway, faster on railways
+// put a generated line in the same direction (and, for loops, the same start) as the hand-written one
+function orient(g, old){
+  let st = g.st.slice();
+  const segKmOf = {}; g.st.forEach((a, i) => { if(i < g.km.length){ const b = g.st[(i + 1) % g.st.length]; segKmOf[[a, b].sort().join('|')] = g.km[i]; } });
+  if(old && old.st){
+    const a = st.indexOf(old.st[0]), b = st.indexOf(old.st[1]);
+    if(g.loop){
+      if(a >= 0){ st = st.slice(a).concat(st.slice(0, a));
+        if(b >= 0 && st.indexOf(old.st[1]) > st.length / 2){ st = [st[0]].concat(st.slice(1).reverse()); } }
+    } else {
+      const z = st.indexOf(old.st[old.st.length - 1]);
+      if(a >= 0 && z >= 0 && a > z) st.reverse();
+    }
+  }
+  const segs = g.loop ? st.length : st.length - 1;
+  const km = Array.from({length:segs}, (_, i) => segKmOf[[st[i], st[(i + 1) % st.length]].sort().join('|')] || 1);
+  return {st, km};
+}
 function mergeNetwork(){
   if(!NET) return;
   for(const [sid, s] of Object.entries(NET.stations)){
@@ -628,28 +677,45 @@ function mergeNetwork(){
     else ST[sid] = {n:s.n, ja:s.ja, ll:s.ll};
   }
   for(const [id, g] of Object.entries(NET.lines)){
-    const old = LINES[id], km = g.km.slice(), min = km.map(estMin);
+    const old = LINES[id], o = orient(g, old), n = o.st.length, km = o.km.slice();
+    const op = (old && old.op) || g.op, min = km.map(k => estMin(k, op));
     if(old && old.st){
       // spread each hand-checked segment (which may skip stations) over the generated ones it covers
-      old.st.slice(1).forEach((b, i) => {
-        let ia = g.st.indexOf(old.st[i]), ib = g.st.indexOf(b);
+      old.st.slice(0, old.loop ? old.st.length : old.st.length - 1).forEach((a, i) => {
+        const b = old.st[(i + 1) % old.st.length];
+        const ia = o.st.indexOf(a), ib = o.st.indexOf(b);
         if(ia < 0 || ib < 0) return;
-        if(ia > ib) [ia, ib] = [ib, ia];
-        const span = km.slice(ia, ib), tot = span.reduce((a, x) => a + x, 0) || 1;
-        const hk = old.km ? old.km[i] : tot, hm = old.min[i];
+        const steps = old.loop || g.loop ? (ib - ia + n) % n : ib - ia;
+        if(steps <= 0) return;
+        const idx = Array.from({length:steps}, (_, k) => (ia + k) % n);
+        const tot = idx.reduce((s2, k) => s2 + km[k], 0) || 1, hk = old.km ? old.km[i] : tot, hm = old.min[i];
         let left = hm;
-        for(let k = ia; k < ib; k++){
-          km[k] = Math.round(span[k - ia] / tot * hk * 100) / 100;
-          const m = k === ib - 1 ? left : Math.max(1, Math.round(span[k - ia] / tot * hm));
+        idx.forEach((k, j) => {
+          const part = km[k] / tot;
+          km[k] = Math.round(part * hk * 100) / 100;
+          const m = j === idx.length - 1 ? left : Math.max(1, Math.round(part * hm));
           min[k] = Math.max(1, m); left -= min[k];
-        }
+        });
       });
-      Object.assign(old, {st:g.st, km, min}); delete old.n;   // every generated segment is one stop
+      Object.assign(old, {st:o.st, km, min, loop:old.loop || g.loop}); delete old.n;   // every generated segment is one stop
     } else {
-      const a = NET.stations[g.st[0]], z = NET.stations[g.st[g.st.length - 1]];
-      LINES[id] = {...NEW_LINES[id], code:(NEW_LINES[id] || {}).code || g.ref || id, color:g.colour || '#8580b0', op:'metro',
-        name:(NEW_LINES[id] || {}).name || X(id, id, id), st:g.st, km, min, ends:[E(a.n, a.ja), E(z.n, z.ja)]};
+      const a = NET.stations[o.st[0]], z = NET.stations[o.st[n - 1]], meta = NEW_LINES[id] || {};
+      const fixed = meta.minFix && meta.minFix.length === min.length ? meta.minFix : min;
+      LINES[id] = {code:g.ref || id, color:g.colour || '#8580b0', name:X(id, id, id), ...meta, op:g.op, loop:g.loop,
+        st:o.st, km, min:fixed, ends:[E(a.n, a.ja), E(z.n, z.ja)]};
     }
+  }
+  // verified distances (operator fare checks, Nov 2026) for lines that have no hand-written segments
+  const KM_ANCHOR = [['hankyuKyoto','hankyuUmeda','juso',2.4], ['hankyuKyoto','juso','awaji',4.2], ['hankyuSenri','tenroku','awaji',3.5],
+    ['hankyuKobe','hankyuUmeda','juso',2.4], ['hankyuTakarazuka','hankyuUmeda','juso',2.4],
+    ['hanshinMain','hanshinUmeda','hanshinAmagasaki',8.9], ['hanshin','osakaNamba','hanshinAmagasaki',10.1],
+    ['kintetsuNara','osakaNamba','uehommachi',2.0], ['kintetsuNara','uehommachi','tsuruhashi',1.1], ['kintetsuOsaka','uehommachi','fuse',4.1]];
+  for(const [id, a, b, total] of KM_ANCHOR){
+    const l = LINES[id]; if(!l) continue;
+    let ia = l.st.indexOf(a), ib = l.st.indexOf(b); if(ia < 0 || ib < 0) continue;
+    if(ia > ib) [ia, ib] = [ib, ia];
+    const sum = l.km.slice(ia, ib).reduce((x, y) => x + y, 0) || 1;
+    for(let k = ia; k < ib; k++) l.km[k] = Math.round(l.km[k] / sum * total * 100) / 100;
   }
   // walking links between separate stations less than ~450 m apart (hand-written WALKS keep their minutes)
   const have = new Set(WALKS.map(([a, b]) => [a, b].sort().join('|')));
@@ -739,10 +805,11 @@ function railRoute(origin, place, ban = {}){
   // fare: consecutive rides on the same operator share one ticket
   const rides = steps.filter(s => s.t === 'ride'); let yen = 0, i = 0;
   if(rides.some(s => s.from === s.to)) return null;   // out-and-back detour, not a real route
-  while(i < rides.length){ const op = LINES[rides[i].line].op; let kmSum = 0, air = false;
-    while(i < rides.length && LINES[rides[i].line].op === op){ const r = rides[i++]; kmSum += r.km;
+  while(i < rides.length){ const op = LINES[rides[i].line].op; let kmSum = 0, air = false; const grp = [];
+    while(i < rides.length && LINES[rides[i].line].op === op){ const r = rides[i++]; kmSum += r.km; grp.push(r);
       air = air || r.from === 'kix' || r.to === 'kix'; }
-    yen += FARE[op](kmSum, air); }
+    yen += FARE[op](kmSum, air, grp); }
+  rides.forEach(s => { yen += LINES[s.line].extra || 0; });
   const ops = [...new Set(rides.map(s => LINES[s.line].op))];
   return {mode: ops.includes('bus') ? 'bus' : 'train', ops, min: Math.round(best.tot), yen, steps, lines: rides.map(s => s.line),
     pass: ops.every(o => o === 'metro' || o === 'bus') ? PASS.metro : PASS.none};
@@ -753,7 +820,8 @@ const memo = {};
 function routesFor(p){
   const mk = ORIGIN.id + '>' + p.id; if(memo[mk]) return memo[mk];
   const d = hav(ORIGIN.ll, p.ll), seen = {}; let out = [];
-  const push = r => { const sig = r.steps.filter(s => s.t === 'ride').map(s => LINES[s.line].op + s.from + s.to).join('>');
+  // same operator + same stations = same trip (e.g. Nankai local vs express), except trains with a seat charge
+  const push = r => { const sig = r.steps.filter(s => s.t === 'ride').map(s => (LINES[s.line].extra ? s.line : LINES[s.line].op) + s.from + s.to).join('>');
     if(!seen[sig]){ seen[sig] = 1; out.push(r); } };
   const nTransfer = r => r.lines.length - 1;
   const best = railRoute(ORIGIN, p);
@@ -768,7 +836,8 @@ function routesFor(p){
       bans.push(Object.fromEntries(Object.keys(LINES).filter(l => LINES[l].op !== op).map(l => [l,1]))));
     bans.map(b => railRoute(ORIGIN, p, b)).filter(a => a && a.min <= best.min*1.4 + 8).forEach(push);
     // recommend by time, with a small penalty per transfer and per ¥100, so a near-tie goes to the simpler route
-    const score = r => r.min + 3*nTransfer(r) + r.yen/100;
+    // reserved-seat trains (Rapi:t) need an extra ticket, so they only win when clearly faster
+    const score = r => r.min + 3*nTransfer(r) + r.yen/100 + r.steps.reduce((a, s) => a + (s.t === 'ride' && LINES[s.line].extra ? LINES[s.line].extra / 50 : 0), 0);
     out.sort((a,b) => score(a) - score(b));
     const direct = out.find(r => r.mode === 'bus' && r.lines.length === 1);   // always keep a direct bus as an option
     out = out.slice(0, 3); if(direct && !out.includes(direct)) out[out.length - 1] = direct;
@@ -1445,7 +1514,7 @@ function routeCard(r, i, p){
   const rides = r.steps.filter(s => s.t==='ride');
   const chain = rides.length ? `<span class="chain">${rides.map(s => badge(s.line)).join('<i>›</i>')}</span><span class="sep">·</span>` : '';
   const bits = [`<span class="price">${price(r)}</span>`];
-  if(rides.length) bits.push(transfers(r) ? t('transfersN', transfers(r)) : t('noTransfer'), t('walkTotal', walkMin(r)));
+  if(rides.length){ bits.push(transfers(r) ? t('transfersN', transfers(r)) : t('noTransfer')); if(walkMin(r)) bits.push(t('walkTotal', walkMin(r))); }
   if(r.km) bits.push(`${r.km} ${t('km')}`);
   const covering = rides.length ? PASSES.filter(p => p.badge && rides.every(s => p.cover(s))) : [];
   const pass = !rides.length ? '' : covering.length ? covering.slice(0, 2).map(p => `<span class="pass" data-pass="${p.id}">✓ ${tr(p.short)}</span>`).join('') + (covering.length > 2 ? `<span class="pass" data-pass="${covering[2].id}">+${covering.length - 2}</span>` : '')
