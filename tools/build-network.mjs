@@ -8,7 +8,7 @@ import {writeFileSync, mkdirSync} from 'node:fs';
 
 const OVERPASS = 'https://overpass-api.de/api/interpreter';
 
-// Areas lines are clipped to (south, west, north, east). Kyoto, Nara and Kobe come later with checked fares.
+// Areas lines are clipped to (south, west, north, east). Lines to Kyoto, Nara and Kobe use span instead.
 const AREA = {
   osaka: [34.55, 135.38, 34.78, 135.62],
   airport: [34.38, 135.22, 34.78, 135.62]       // Osaka + the Kansai Airport corridor
@@ -16,6 +16,7 @@ const AREA = {
 
 // One OSM route relation per line or train type. Relation IDs are stable; re-check if OSM editors replace a route.
 // op = fare operator. area = clip to that box (keeps the longest run of stops inside). from = drop stops before it.
+// span = [stop A, stop B]: keep only the stops from A to B (either order) — used for the day-trip lines.
 const LINES = {
   // Osaka Metro (whole lines)
   midosuji:    {rel:2411153, op:'metro'},
@@ -31,10 +32,10 @@ const LINES = {
   // JR West
   jrLoop:      {rel:10073682, op:'jr', loop:true},      // outer loop (clockwise)
   jrYume:      {rel:6088924,  op:'jr'},
-  jrKyoto:     {rel:11808754, op:'jr', area:'osaka'},   // local, Kyoto → Osaka
-  jrKobe:      {rel:16784421, op:'jr', area:'osaka'},
+  jrKyoto:     {rel:11808754, op:'jr', span:['Kyoto', 'Osaka']},   // local, Kyoto → Osaka
+  jrKobe:      {rel:16784421, op:'jr', span:['Osaka', 'Kobe']},
   jrTozai:     {rel:11816511, op:'jr'},
-  jrYamatoji:  {rel:11810048, op:'jr', area:'osaka'},
+  jrYamatoji:  {rel:11810048, op:'jr', area:'osaka'},     // local (JR Namba–Koriyama); Yamatoji Rapid to Nara is hand-written
   jrHigashi:   {rel:3344075,  op:'jr', area:'osaka'},
   jrAir:       {rel:18630327, op:'jr', area:'airport'},  // Kansai Airport Rapid
   // Nankai
@@ -43,14 +44,14 @@ const LINES = {
   rapit:       {rel:18673505, op:'nankai', area:'airport'}, // Rapi:t α
   // Hanshin
   hanshin:     {rel:11923501, op:'hanshin'},                 // Namba Line (relation lists both directions)
-  hanshinMain: {rel:11658109, op:'hanshin', area:'osaka'},
+  hanshinMain: {rel:11658109, op:'hanshin', span:['Osaka-Umeda', 'Kobe-Sannomiya']},
   // Hankyu
-  hankyuKyoto: {rel:10255877, op:'hankyu', area:'osaka'},
-  hankyuKobe:  {rel:11966252, op:'hankyu', area:'osaka'},
+  hankyuKyoto: {rel:10255877, op:'hankyu', span:['Osaka-Umeda', 'Kyoto-kawaramachi']},
+  hankyuKobe:  {rel:11966252, op:'hankyu', span:['Osaka-Umeda', 'Kobe-Sannomiya']},
   hankyuTakarazuka: {rel:11982564, op:'hankyu', area:'osaka'},
   hankyuSenri: {rel:1872144,  op:'hankyu', area:'osaka'},
   // Kintetsu
-  kintetsuNara:  {rel:18665645, op:'kintetsu', area:'osaka', from:'Osaka Namba'},  // rapid express, Osaka part
+  kintetsuNara:  {rel:18665645, op:'kintetsu', span:['Osaka Namba', 'Kintetsu-Nara']},  // rapid express
   kintetsuOsaka: {rel:11962196, op:'kintetsu', area:'osaka'},
   kintetsuMinami:{rel:11942103, op:'kintetsu', area:'osaka'}
   // Keihan main line: no route relation in OSM yet (only the Uji and Katano branches) — to be written by hand.
@@ -74,11 +75,14 @@ const ID = {
   'Gamo 4-chome': 'gamo4', 'Zuiko 4-chome': 'zuiko4', 'Kansai Airport': 'kix', 'Osaka Namba': 'osakaNamba',
   'nankai:Namba': 'nankaiNamba', 'hankyu:Osaka-Umeda': 'hankyuUmeda', 'hanshin:Osaka-Umeda': 'hanshinUmeda',
   'hanshin:Amagasaki': 'hanshinAmagasaki', 'hankyu:Suita': 'hankyuSuita', 'hankyu:Nakatsu': 'hankyuNakatsu', 'kintetsu:Kintetsu-Nippombashi': 'nippombashi', 'Osaka Uehommachi': 'uehommachi',
-  'Osaka Abenobashi': 'abenobashi'
+  'Osaka Abenobashi': 'abenobashi', 'Kintetsu-Nara': 'kNara', 'hankyu:Kobe-Sannomiya': 'hankyuSannomiya',
+  'hanshin:Kobe-Sannomiya': 'hanshinSannomiya'
 };
 const fold = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 const clean = s => { s = fold(s.split(';').pop()).replace(/\s+/g, ' ').trim(); return FIX[s] || s; };
-const slug = (s, op) => ID[`${op}:${s}`] || ID[s] || s.split(/[^A-Za-z0-9]+/).filter(Boolean)
+const norm = s => s.toLowerCase().replace(/[^a-z0-9:]/g, '');   // 'Kobe Sannomiya' = 'Kobe-Sannomiya'
+const NID = Object.fromEntries(Object.entries(ID).map(([k, v]) => [norm(k), v]));
+const slug = (s, op) => NID[norm(`${op}:${s}`)] || NID[norm(s)] || s.split(/[^A-Za-z0-9]+/).filter(Boolean)
   .map((w, i) => i ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w.toLowerCase()).join('');
 
 const hav = (a, b) => { const R = 6371, r = Math.PI / 180, dLa = (b[0] - a[0]) * r, dLo = (b[1] - a[1]) * r;
@@ -105,7 +109,7 @@ node(around.s:400)["railway"="subway_entrance"]; out body;`);
 const rels = Object.fromEntries(els.filter(e => e.type === 'relation').map(e => [e.id, e]));
 const nodes = Object.fromEntries(els.filter(e => e.type === 'node').map(e => [e.id, e]));
 
-const stations = {}, lines = {}, pos = {};
+const stations = {}, lines = {}, pos = {}, first = {}, renamed = new Set();
 for(const [id, cfg] of Object.entries(LINES)){
   const rel = rels[cfg.rel]; if(!rel) throw new Error(`relation ${cfg.rel} (${id}) missing`);
   let stops = rel.members.filter(m => m.type === 'node' && /^stop/.test(m.role)).map(m => nodes[m.ref]).filter(Boolean);
@@ -117,6 +121,11 @@ for(const [id, cfg] of Object.entries(LINES)){
   const seen = new Set(); const cut = run.findIndex(s => seen.has(s.sid) || !seen.add(s.sid));
   if(cut > 0 && !cfg.loop) run = run.slice(0, cut);
   if(cfg.from){ const k = run.findIndex(s => s.en === cfg.from); if(k < 0) throw new Error(`${id}: from ${cfg.from} not found`); run = run.slice(k); }
+  if(cfg.span){
+    const at = cfg.span.map(nm => run.findIndex(s => norm(s.en) === norm(nm)));
+    if(at.some(k => k < 0)) throw new Error(`${id}: span stop not found (${cfg.span}); stops: ${run.map(s => s.en).join(', ')}`);
+    run = run.slice(Math.min(...at), Math.max(...at) + 1);
+  }
   if(cfg.area){   // longest run of consecutive stops inside the area
     let best = [], cur = [];
     for(const s of run){ if(inside(s.n, AREA[cfg.area])) cur.push(s); else { if(cur.length > best.length) best = cur; cur = []; } }
@@ -124,6 +133,13 @@ for(const [id, cfg] of Object.entries(LINES)){
   }
   const st = [];
   for(const s of run){
+    const at = first[s.sid];
+    if(at && at.op !== cfg.op && hav(at.ll, [s.n.lat, s.n.lon]) > .6){
+      const alt = cfg.op + s.sid[0].toUpperCase() + s.sid.slice(1);
+      if(!renamed.has(alt)){ renamed.add(alt); console.log(`split ${s.sid} → ${alt} (${at.op} vs ${cfg.op})`); }
+      s.sid = alt;
+    }
+    first[s.sid] = first[s.sid] || {op:cfg.op, ll:[s.n.lat, s.n.lon]};
     (pos[s.sid] = pos[s.sid] || []).push([s.n.lat, s.n.lon]);
     stations[s.sid] = stations[s.sid] || {n:s.en, ja:s.ja};
     if(st[st.length - 1] !== s.sid) st.push(s.sid);

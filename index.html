@@ -433,7 +433,9 @@ const ORIGINS = [
   {id:'umeda', name:X('Umeda / Osaka Station','Umeda / Osaka Station','梅田・大阪駅'), ll:[34.7025,135.4959], access:[
     ['osaka',0],
     ['umeda',5,X('ลงใต้ดินตามป้าย “M” สีแดง','Go underground following the red “M” signs','赤い「M」の案内に沿って地下へ')],
-    ['higashiUmeda',6,X('เดินใต้ดินผ่าน Whity Umeda','Walk underground through Whity Umeda','地下街「ホワイティうめだ」経由')]]},
+    ['higashiUmeda',6,X('เดินใต้ดินผ่าน Whity Umeda','Walk underground through Whity Umeda','地下街「ホワイティうめだ」経由')],
+    ['hankyuUmeda',7,X('ออกประตู Midosuji-guchi ข้ามไปทางตะวันออกเฉียงเหนือ สถานี Hankyu อยู่ชั้น 3 ของอาคาร Hankyu','Leave by the Midosuji gate and cross to the north-east; Hankyu’s platforms are on the 3rd floor of the Hankyu building','御堂筋口から北東へ。阪急の改札は阪急ビル3階')],
+    ['hanshinUmeda',5,X('ออกประตู Midosuji-guchi ลงใต้ดิน สถานี Hanshin อยู่ใต้ห้าง Hanshin','Leave by the Midosuji gate and go underground; Hanshin is under the Hanshin department store','御堂筋口から地下へ。阪神百貨店の地下')]]},
   {id:'shinOsaka', name:X('Shin-Osaka','Shin-Osaka','新大阪'), ll:[34.7335,135.5002], access:[
     ['shinOsaka',3,X('จากชานชาลาชินคันเซ็น ตามป้าย JR Line หรือ Subway','From the Shinkansen platforms, follow the “JR Line” or “Subway” signs','新幹線ホームから「JR線」または「地下鉄」の案内へ')]]},
   {id:'tennoji', name:X('Tennoji','Tennoji','天王寺'), ll:[34.6473,135.5140], access:[['tennoji',3]]},
@@ -484,7 +486,18 @@ const ST = {
   osakajokoen:{n:'Osakajokoen', ja:'大阪城公園', ll:[34.6887,135.5346]},
   tsuruhashi:{n:'Tsuruhashi', ja:'鶴橋', ll:[34.6655,135.5300]},
   nishikujo:{n:'Nishikujo', ja:'西九条', ll:[34.6830,135.4662]},
-  universalCity:{n:'Universal City', ja:'ユニバーサルシティ', ll:[34.6677,135.4381]}
+  universalCity:{n:'Universal City', ja:'ユニバーサルシティ', ll:[34.6677,135.4381]},
+  // day trips: Keihan (no route in OpenStreetMap), JR Nara Line, JR Nara
+  kitahama:{n:'Kitahama', ja:'北浜', ll:[34.6915,135.5065]},
+  hirakatashi:{n:'Hirakatashi', ja:'枚方市', ll:[34.8159,135.6487]},
+  tambabashi:{n:'Tambabashi', ja:'丹波橋', ll:[34.9372,135.7676]},
+  fushimiInari:{n:'Fushimi-Inari (Keihan)', ja:'伏見稲荷（京阪）', ll:[34.9670,135.7697]},
+  shichijo:{n:'Shichijo', ja:'七条', ll:[34.9887,135.7693]},
+  kiyomizuGojo:{n:'Kiyomizu-Gojo', ja:'清水五条', ll:[34.9963,135.7683]},
+  gionShijo:{n:'Gion-Shijo', ja:'祇園四条', ll:[35.0037,135.7721]},
+  sanjo:{n:'Sanjo', ja:'三条', ll:[35.0089,135.7721]},
+  inari:{n:'Inari (JR)', ja:'稲荷（JR）', ll:[34.9671,135.7710]},
+  nara:{n:'Nara (JR)', ja:'奈良（JR）', ll:[34.6807,135.8197]}
 };
 const sn = id => LANG === 'ja' ? ST[id].ja : ST[id].n;
 const stName = id => t(ST[id].bus ? 'busStop' : 'station', sn(id));
@@ -522,12 +535,61 @@ const LINES = {
           X('วนนอก (Outer loop) ทาง Kyobashi / Tsuruhashi','Outer loop, via Kyobashi / Tsuruhashi','外回り（京橋・鶴橋方面）')]},
   jrYume:{name:X('JR Yumesaki Line','JR Yumesaki Line','JRゆめ咲線'), code:'JR', color:'#1d4a9c', op:'jr',
     st:['nishikujo','universalCity'], min:[5], km:[3.2], n:[2], ends:[E('Nishikujo','西九条'), E('Sakurajima','桜島')]},
-  jrKyoto:{name:X('JR Kyoto Line','JR Kyoto Line','JR京都線'), code:'JR', color:'#0072bc', op:'jr',
-    st:['shinOsaka','osaka'], min:[4], km:[3.8], ends:[E('Kyoto','京都'), E('Osaka / Kobe','大阪・神戸')]},
+  jrKyoto:{stopAt:['kyoto','takatsuki','shinOsaka','osaka'], name:X('JR Kyoto Line','JR Kyoto Line','JR京都線'), code:'JR', color:'#0072bc', op:'jr',
+    st:['kyoto','takatsuki','shinOsaka','osaka'], min:[14,11,4], km:[21.6,17.4,3.8], ends:[E('Kyoto','京都'), E('Osaka / Kobe','大阪・神戸')],
+    tip:X('ไปเกียวโตขึ้นขบวน 新快速 Special Rapid เร็วสุด (~29 นาที) ไม่ต้องจ่ายเพิ่ม · ตู้ A-Seat ต้องซื้อที่นั่งเพิ่ม',
+          'For Kyoto take a 新快速 Special Rapid, fastest (~29 min) at no extra charge · the A-Seat car needs a seat ticket',
+          '京都へは新快速が最速（約29分・追加料金なし）・Aシート車両は座席指定券が必要')},
+  jrKobe:{stopAt:['osaka','amagasaki','ashiya','sannomiya','motomachi','kobe'], name:X('JR Kobe Line','JR Kobe Line','JR神戸線'), code:'JR', color:'#0072bc', op:'jr',
+    st:['osaka','ashiya','sannomiya','motomachi','kobe'], min:[13,8,2,2], km:[19.2,11.4,0.8,1.7],
+    ends:[E('Osaka / Kyoto','大阪・京都'), E('Kobe / Himeji','神戸・姫路')],
+    tip:X('ไปโกเบขึ้นขบวน 新快速 Special Rapid (~21 นาทีถึง Sannomiya) ไม่ต้องจ่ายเพิ่ม · ตู้ A-Seat ต้องซื้อที่นั่งเพิ่ม',
+          'For Kobe take a 新快速 Special Rapid (~21 min to Sannomiya) at no extra charge · the A-Seat car needs a seat ticket',
+          '神戸へは新快速（三ノ宮まで約21分・追加料金なし）・Aシート車両は座席指定券が必要')},
+  jrYamatojiRapid:{name:X('JR Yamatoji Rapid','JR Yamatoji Rapid','JR大和路快速'), code:'JR', color:'#00a95f', op:'jr',
+    st:['osaka','nishikujo','bentencho','shinImamiya','tennoji','nara'], min:[6,3,9,4,33], km:[3.6,1.6,4.8,1.0,37.5], n:[2,1,3,1,null],
+    ends:[E('Osaka','大阪'), E('Nara / Kamo','奈良・加茂')],   // loop part 1 min slower than the Loop Line, so trips inside Osaka show the Loop Line
+    tip:X('ขึ้นขบวน 大和路快速 Yamatoji Rapid ปลายทาง 奈良 Nara หรือ 加茂 Kamo · วิ่งรอบสาย Loop ก่อนออกไปนาระ',
+          'Take a 大和路快速 Yamatoji Rapid bound for 奈良 Nara or 加茂 Kamo · it runs round the Loop Line first',
+          '奈良行き・加茂行きの大和路快速に乗車（環状線経由）')},
+  jrInari:{name:X('JR Nara Line','JR Nara Line','JR奈良線'), code:'JR', color:'#a0662a', op:'jr',
+    st:['kyoto','inari'], min:[5], km:[2.7], n:[2], ends:[E('Kyoto','京都'), E('Uji / Nara','宇治・奈良')],
+    tip:X('ขึ้นขบวน 普通 Local เท่านั้น ขบวน Rapid ไม่จอด Inari','Take a 普通 Local train; rapid trains skip Inari','普通列車に乗車（快速は稲荷に停まりません）')},
   jrAir:{name:X('JR Kansai Airport Rapid','JR Kansai Airport Rapid','JR関空快速'), code:'JR', color:'#3a8fb7', op:'jr',
     st:['kix','tennoji','shinImamiya','bentencho','nishikujo','osaka'], min:[54,3,6,3,5], km:[46.0,1.0,4.8,1.6,3.6], n:[null,null,null,null,null],
     ends:[E('Kansai Airport','関西空港'), E('Tennoji / Osaka','天王寺・大阪')],
     tip:X('ขาออกจากสนามบินขึ้นตู้ไหนก็ได้ · ขาไปสนามบินขบวนแยกที่ Hineno ให้ดูป้ายปลายทางข้างตู้','From the airport any car is fine · toward the airport the train splits at Hineno, so check the destination sign on your car','空港発はどの車両でもOK・空港行きは日根野で切り離すので車両の行先表示を確認')},
+  hanshinMain:{stopAt:['hanshinUmeda','hanshinAmagasaki','koshien','hanshinNishinomiya','hanshinAshiya','uozaki','mikage','hanshinSannomiya'], name:X('Hanshin Main Line','Hanshin Main Line','阪神本線'), code:'HS', color:'#00a0e9', op:'hanshin',
+    st:['hanshinUmeda','hanshinAmagasaki','hanshinSannomiya'], min:[7,26], km:[8.9,22.3],
+    ends:[E('Osaka-Umeda','大阪梅田'), E('Kobe-Sannomiya / Himeji','神戸三宮・姫路')],
+    tip:X('ขึ้นขบวน 直通特急 หรือ 特急 ไม่ต้องจ่ายเพิ่ม','Take a 直通特急 or 特急 train, no extra charge','直通特急・特急に乗車（追加料金なし）')},
+  hankyuKyoto:{stopAt:['hankyuUmeda','juso','awaji','takatsukiShi','nagaokaTenjin','katsura','saiin','omiya','karasuma','kyotoKawaramachi'], name:X('Hankyu Kyoto Line','Hankyu Kyoto Line','阪急京都線'), code:'HK', color:'#8c1d18', op:'hankyu',
+    st:['hankyuUmeda','juso','awaji','katsura','karasuma','kyotoKawaramachi'], min:[3,5,27,6,2], km:[2.4,4.2,33.8,6.4,0.9],
+    ends:[E('Osaka-Umeda','大阪梅田'), E('Kyoto-Kawaramachi','京都河原町')],
+    tip:X('ขึ้นขบวน 特急 Limited Express ไม่ต้องจ่ายเพิ่ม (~43 นาที) · ตู้ PRiVACE ต้องซื้อที่นั่งเพิ่ม',
+          'Take a 特急 Limited Express, no extra charge (~43 min) · the PRiVACE car needs a seat ticket',
+          '特急に乗車（約43分・追加料金なし）・PRiVACE車両は座席指定券が必要')},
+  hankyuKobe:{stopAt:['hankyuUmeda','juso','nishinomiyaKitaguchi','hankyuSannomiya'], name:X('Hankyu Kobe Line','Hankyu Kobe Line','阪急神戸線'), code:'HK', color:'#8c1d18', op:'hankyu',
+    st:['hankyuUmeda','juso','nishinomiyaKitaguchi','hankyuSannomiya'], min:[3,10,14], km:[2.4,13.2,16.7],
+    ends:[E('Osaka-Umeda','大阪梅田'), E('Kobe-Sannomiya / Shinkaichi','神戸三宮・新開地')],
+    tip:X('ขึ้นขบวน 特急 Limited Express ไม่ต้องจ่ายเพิ่ม (~27 นาที)','Take a 特急 Limited Express, no extra charge (~27 min)','特急に乗車（約27分・追加料金なし）')},
+  kintetsuNara:{name:X('Kintetsu Nara Line','Kintetsu Nara Line','近鉄奈良線'), code:'KT', color:'#e2041b', op:'kintetsu',
+    st:['osakaNamba','uehommachi','tsuruhashi','yamatoSaidaiji','kNara'], min:[3,3,25,5], km:[2.0,1.1,25.3,4.4],
+    ends:[E('Osaka-Namba','大阪難波'), E('Kintetsu-Nara','近鉄奈良')],
+    tip:X('ขึ้นขบวน 快速急行 หรือ 急行 ปลายทาง 近鉄奈良 ไม่ต้องจ่ายเพิ่ม · ขบวน 特急 ต้องซื้อตั๋วเพิ่ม',
+          'Take a 快速急行 or 急行 bound for 近鉄奈良, no extra charge · 特急 limited expresses need an extra ticket',
+          '近鉄奈良行きの快速急行・急行に乗車（追加料金なし）・特急は特急券が必要')},
+  keihan:{name:X('Keihan Main Line (Limited Express)','Keihan Main Line (Limited Express)','京阪本線（特急）'), code:'KH', color:'#1b3b8f', op:'keihan',
+    st:['yodoyabashi','kitahama','temmabashi','kyobashi','hirakatashi','tambabashi','shichijo','gionShijo','sanjo'],
+    min:[1,2,4,14,20,6,2,3], km:[0.5,0.8,1.7,18.8,19.5,5.7,1.6,0.7], n:[1,1,1,null,null,null,1,1],
+    ends:[E('Yodoyabashi','淀屋橋'), E('Demachiyanagi','出町柳')],
+    tip:X('ขึ้นขบวน 特急 Limited Express ไม่ต้องจ่ายเพิ่ม · ตู้ Premium Car ต้องซื้อที่นั่งเพิ่ม',
+          'Take a 特急 Limited Express, no extra charge · the Premium Car needs a seat ticket',
+          '特急に乗車（追加料金なし）・プレミアムカーは座席指定券が必要')},
+  keihanLocal:{name:X('Keihan Main Line (Local)','Keihan Main Line (Local)','京阪本線（普通）'), code:'KH', color:'#1b3b8f', op:'keihan',
+    st:['tambabashi','fushimiInari','shichijo','kiyomizuGojo','gionShijo'], min:[6,4,2,2], km:[3.3,2.4,0.7,0.9], n:[4,2,1,1],
+    ends:[E('Yodoyabashi','淀屋橋'), E('Demachiyanagi','出町柳')],
+    tip:X('ขบวน 特急 ไม่จอดสถานีนี้ เปลี่ยนเป็นขบวน 普通 Local หรือ 準急 ที่ Tambabashi','Limited expresses skip this stop; change to a 普通 Local or 準急 at Tambabashi','特急は通過します。丹波橋で普通・準急に乗り換え')},
   hanshin:{name:X('Hanshin Namba Line','Hanshin Namba Line','阪神なんば線'), code:'HS', color:'#f08300', op:'hanshin',
     st:['osakaNamba','kujo','nishikujo'], min:[6,2], km:[2.5,1.3], n:[3,1], ends:[E('Kintetsu-Nara','近鉄奈良'), E('Amagasaki / Kobe-Sannomiya','尼崎・神戸三宮')]},
   bus60:{name:X('Osaka City Bus สาย 60','Osaka City Bus route 60','大阪シティバス 60号系統'), code:'60', color:'#0f766e', op:'bus',
@@ -542,12 +604,19 @@ const WALKS = [
   ['umeda','higashiUmeda',6], ['shinImamiya','dobutsuen',6]
 ];
 const OP = {metro:X('Metro','Metro','地下鉄'), jr:'JR', nankai:X('Nankai','Nankai','南海'), hanshin:X('Hanshin','Hanshin','阪神'), bus:X('รถบัส','Bus','バス'),
-  hankyu:X('Hankyu','Hankyu','阪急'), kintetsu:X('Kintetsu','Kintetsu','近鉄')};
+  hankyu:X('Hankyu','Hankyu','阪急'), kintetsu:X('Kintetsu','Kintetsu','近鉄'), keihan:X('Keihan','Keihan','京阪')};
+// JR West special fares between these exact stations (cheaper than the distance table; checked Nov 2026)
+const JR_PAIR = {'kyoto|osaka':580, 'kyoto|shinOsaka':580, 'osaka|sannomiya':420, 'motomachi|osaka':420, 'kobe|osaka':460,
+  'nara|tennoji':510, 'nara|shinImamiya':580};
 // Fare tables per operator (checked Nov 2026). k = distance in km, air = trip touches Kansai Airport
 const FARE = {
   metro:k => k<=3?190 : k<=7?240 : k<=13?290 : k<=19?340 : 390,
-  jr:(k, air) => { k = Math.ceil(k - 1e-9); return (k<=3?150 : k<=6?180 : k<=10?200 : k<=15?240 : k<=20?320 : k<=25?410 : k<=30?490
-      : k<=35?580 : k<=40?660 : k<=45?750 : k<=50?840 : k<=60?960 : 1120) + (air ? 220 : 0); },
+  jr:(k, air, grp) => {
+    if(grp && grp.length && !air){ const pair = JR_PAIR[[grp[0].from, grp[grp.length - 1].to].sort().join('|')]; if(pair) return pair; }
+    k = k > 60 ? Math.floor(k + 1e-9) : Math.ceil(k - 1e-9);   // over 60 km Yahoo!路線情報 fares match whole-km bands (KIX→Kobe 90.1 km = ¥1,460 + ¥220)
+    return (k<=3?150 : k<=6?180 : k<=10?200 : k<=15?240 : k<=20?320 : k<=25?410 : k<=30?490
+      : k<=35?580 : k<=40?660 : k<=45?750 : k<=50?840 : k<=60?960 : k<=70?1120
+      : k<=80?1300 : k<=90?1460 : k<=100?1640 : 1880) + (air ? 220 : 0); },   // over 60 km (only trips from KIX): main-line table
   nankai:(k, air) => { k = Math.ceil(k - 1e-9); return (k<=3?180 : k<=7?240 : k<=11?290 : k<=15?370 : k<=19?420 : k<=23?490 : k<=27?540
       : k<=31?610 : k<=35?650 : k<=39?690 : k<=44?740 : k<=49?790 : k<=54?850 : 880) + (air ? 230 : 0); },
   // Hanshin: normal / with the Namba Line surcharge (any ride on Nishikujo–Osaka-Namba)
@@ -563,7 +632,7 @@ const FARE = {
     return ([[4,170],[9,200],[14,240],[19,280],[26,290],[33,330],[42,390],[51,410],[60,480],[70,540]].find(x => k <= x[0]) || [0,640])[1]; },
   kintetsu:k => { k = Math.ceil(k - 1e-9);
     return ([[3,180],[6,240],[10,300],[14,360],[18,430],[22,490],[26,530],[30,590],[35,680],[40,760],[45,830],[50,910]].find(x => k <= x[0]) || [0,990])[1]; },
-  keihan:k => { k = Math.ceil(k - 1e-9);   // since 2025-10-01; Oto / Nakanoshima line surcharges not modelled yet
+  keihan:k => { k = Math.ceil(k - 1e-9);   // since 2025-10-01; Oto / Nakanoshima line surcharges not needed (lines end at Sanjo)
     return ([[3,180],[7,240],[12,320],[17,360],[22,400],[28,420],[34,440],[40,460],[46,480],[52,490]].find(x => k <= x[0]) || [0,500])[1]; },
   bus:() => 210
 };
@@ -574,7 +643,8 @@ const CATS = {
   temple:{name:X('วัด · ศาลเจ้า','Temples & shrines','寺・神社'), color:'#ffc766', icon:'torii'},
   shop:{name:X('ช้อปปิ้ง','Shopping','ショッピング'), color:'#b8b3ff', icon:'bag'},
   food:{name:X('ของกิน','Food','グルメ'), color:'#7fe0b3', icon:'bowl'},
-  fun:{name:X('สวนสนุก · พิพิธภัณฑ์','Fun & museums','レジャー'), color:'#8fd6ff', icon:'wheel'}
+  fun:{name:X('สวนสนุก · พิพิธภัณฑ์','Fun & museums','レジャー'), color:'#8fd6ff', icon:'wheel'},
+  daytrip:{name:X('นอกโอซาก้า','Day trips','日帰り'), color:'#ffa86b', icon:'torii', far:true}
 };
 const PASS = {metro:[X('Osaka Amazing Pass','Osaka Amazing Pass','大阪周遊パス'), X('Enjoy Eco Card','Enjoy Eco Card','エンジョイエコカード')], none:[]};
 
@@ -621,10 +691,40 @@ const PLACES = [
   access:[['sumiyoshitaisha',3,X('เดินไปทางตะวันออกราว 3 นาทีถึงศาลเจ้า','About 3 min east of the station','駅から東へ約3分')]]},
  {id:'harukas', name:X('อาเบโนะ ฮารุคัส','Abeno Harukas','あべのハルカス'), cat:'shop', ll:[34.6459,135.5139],
   desc:X('ตึกสูง 300 เมตร ห้าง Kintetsu และจุดชมวิว Harukas 300','A 300 m tower with the Kintetsu department store and the Harukas 300 observatory','高さ300mのビル。近鉄百貨店と展望台「ハルカス300」'),
-  access:[['tennoji',3,X('ตึกเชื่อมกับสถานีโดยตรง · JR ออกประตู Central Gate · Midosuji ออกฝั่งประตูตะวันตก','Directly connected to the station · JR: Central Gate · Midosuji Line: west gate side','駅直結・JRは中央口・御堂筋線は西改札側')]]}
+  access:[['tennoji',3,X('ตึกเชื่อมกับสถานีโดยตรง · JR ออกประตู Central Gate · Midosuji ออกฝั่งประตูตะวันตก','Directly connected to the station · JR: Central Gate · Midosuji Line: west gate side','駅直結・JRは中央口・御堂筋線は西改札側')]]},
+ // ---- day trips (kept small; one city file each later) ----
+ {id:'inari', city:X('เกียวโต','Kyoto','京都'), name:X('ศาลเจ้าฟูชิมิ อินาริ','Fushimi Inari Taisha','伏見稲荷大社'), cat:'daytrip', ll:[34.9671,135.7727],
+  desc:X('ประตูโทริอิสีแดงนับพันเรียงเป็นอุโมงค์ขึ้นเขา เปิดตลอด 24 ชั่วโมง','Thousands of red torii gates forming tunnels up the mountain; open 24 hours','千本鳥居で知られる稲荷神社の総本宮。24時間参拝可'),
+  access:[['inari',2,X('ออกจากสถานีข้ามถนนก็ถึงประตูโทริอิใหญ่','Cross the road outside the station to the big torii gate','駅を出て道を渡るとすぐ大鳥居')],
+          ['fushimiInari',6,X('ออกฝั่งตะวันออก เดินขึ้นเนินตามถนนร้านค้าหน้าศาลเจ้า','Leave on the east side and walk uphill along the shrine’s shop street','東側に出て、参道の商店街を上る')]]},
+ {id:'kiyomizu', city:X('เกียวโต','Kyoto','京都'), name:X('วัดคิโยมิสึ','Kiyomizu-dera','清水寺'), cat:'daytrip', ll:[34.9949,135.7850],
+  desc:X('วัดบนเนินเขา ระเบียงไม้ใหญ่ยื่นออกไปชมวิวเมืองเกียวโต','Hillside temple with the famous wooden stage looking over Kyoto','「清水の舞台」で有名な東山の寺'),
+  access:[['kiyomizuGojo',25,X('ขึ้นมาฝั่งตะวันออกของแม่น้ำ Kamo เดินตามถนน Gojo ไปทางตะวันออก แล้วขึ้นเนิน Gojozaka · ทางชัน','Come up on the east side of the Kamo river, walk east along Gojo-dori, then up Gojo-zaka · steep','鴨川の東側に出て五条通を東へ、五条坂を上る（急坂）')],
+          ['gionShijo',30,X('เดินไปทางตะวันออกตามถนน Shijo ถึงศาลเจ้า Yasaka แล้วเลี้ยวขวาไปตามถนน Ninenzaka / Sannenzaka','Walk east along Shijo-dori to Yasaka Shrine, then right through Ninenzaka / Sannenzaka','四条通を東へ八坂神社まで、右へ二年坂・三年坂を通って')]]},
+ {id:'gion', city:X('เกียวโต','Kyoto','京都'), name:X('กิออน · ศาลเจ้ายาซากะ','Gion & Yasaka Shrine','祇園・八坂神社'), cat:'daytrip', ll:[35.0037,135.7785],
+  desc:X('ย่านเก่าบ้านไม้ ร้านน้ำชา ถ้าโชคดีอาจเห็นไมโกะ','The old wooden-house district with tea houses; you may spot a maiko','町家とお茶屋の街並み。舞妓さんに出会えることも'),
+  access:[['gionShijo',6,X('ขึ้นมาที่ถนน Shijo ฝั่งตะวันออกของแม่น้ำ เดินตรงไปทางตะวันออกจนสุดถนนถึงประตูศาลเจ้า','Come up on Shijo-dori east of the river and walk straight east to the shrine gate','四条通（鴨川の東側）に出て、東へまっすぐ神社の門まで')],
+          ['kyotoKawaramachi',10,X('ขึ้นมาที่ถนน Shijo ข้ามสะพาน Shijo-ohashi แล้วเดินตรงไปทางตะวันออก','Come up on Shijo-dori, cross Shijo-ohashi Bridge and keep walking east','四条通に出て四条大橋を渡り、東へまっすぐ')]]},
+ {id:'narapark', city:X('นาระ','Nara','奈良'), name:X('สวนนาระ (กวาง)','Nara Park (deer)','奈良公園（鹿）'), cat:'daytrip', icon:'star', ll:[34.6851,135.8430],
+  desc:X('สวนกว้างที่มีกวางเดินอิสระกว่าพันตัว ซื้อขนม Shika-senbei ให้กวางได้','A wide park with over a thousand free-roaming deer; you can buy shika-senbei crackers to feed them','千頭以上の鹿が暮らす公園。鹿せんべいをあげられます'),
+  access:[['kNara',6,X('ออกทางออกฝั่งถนน Noborioji (ป้าย Nara Park) เดินขึ้นเนินไปทางตะวันออก จะเริ่มเห็นกวาง','Take the Noborioji-dori exit (signed Nara Park) and walk east uphill; the deer start soon','登大路側の出口（奈良公園の案内）から東へ坂を上るとすぐ鹿がいます')],
+          ['nara',20,X('ออกทางออกฝั่งตะวันออก เดินตามถนน Sanjo-dori ไปทางตะวันออก','Leave by the east exit and walk east along Sanjo-dori','東口から三条通を東へ')]]},
+ {id:'todaiji', city:X('นาระ','Nara','奈良'), name:X('วัดโทไดจิ','Todai-ji','東大寺'), cat:'daytrip', ll:[34.6890,135.8398],
+  desc:X('วิหารไม้ใหญ่ ข้างในมีพระพุทธรูปสัมฤทธิ์องค์ใหญ่ (Daibutsu)','A huge wooden hall housing the Great Buddha (Daibutsu)','大仏殿に奈良の大仏を安置する大寺院'),
+  access:[['kNara',20,X('เดินตามถนน Noborioji ไปทางตะวันออก เลี้ยวซ้ายที่สี่แยกหน้าพิพิธภัณฑ์ Nara National Museum ไปประตู Nandaimon','Walk east along Noborioji-dori, turn left at the Nara National Museum crossing, on to Nandaimon Gate','登大路を東へ、奈良国立博物館の交差点を左へ南大門まで')],
+          ['nara',30,X('เดินตามถนน Sanjo-dori ไปทางตะวันออก ผ่านสวนนาระไปประตู Nandaimon · หรือขึ้นรถบัสเมืองนาระ','Walk east along Sanjo-dori through Nara Park to Nandaimon Gate · or take a Nara city bus','三条通を東へ、奈良公園を通って南大門へ（市内バスも可）')]]},
+ {id:'kitano', city:X('โกเบ','Kobe','神戸'), name:X('คิตาโนะ อิจินกัง','Kitano Ijinkan','北野異人館'), cat:'daytrip', icon:'star', ll:[34.7008,135.1909],
+  desc:X('บ้านสไตล์ตะวันตกยุคเปิดท่าเรือบนเนินเขา ถ่ายรูปสวย','Hillside Western-style houses from the port’s early days; great for photos','開港期の洋館が並ぶ山手の街'),
+  access:[['sannomiya',15,X('ออกฝั่งเหนือ (ประตู West Gate) เดินขึ้นเหนือตามถนน Kitano-zaka','Leave by the north side (West Gate) and walk north up Kitano-zaka','西口から北側へ出て、北野坂を北へ上る')],
+          ['hankyuSannomiya',13,X('ออกฝั่งเหนือ ข้ามถนนใหญ่แล้วเดินขึ้นเนิน Kitano-zaka','Leave on the north side, cross the main road and walk up Kitano-zaka','北側に出て大通りを渡り、北野坂を上る')]]},
+ {id:'harborland', city:X('โกเบ','Kobe','神戸'), name:X('ฮาร์เบอร์แลนด์ · ท่าเรือโกเบ','Kobe Harborland & port','神戸ハーバーランド'), cat:'daytrip', icon:'bag', ll:[34.6793,135.1828],
+  desc:X('ย่านช้อปปิ้งริมท่าเรือ ชิงช้าสวรรค์ วิว Kobe Port Tower ยามค่ำสวยมาก','Waterfront shopping, a Ferris wheel and Kobe Port Tower views, lovely at night','ショッピングと観覧車の港エリア。夜のポートタワーの眺めが人気'),
+  access:[['kobe',5,X('ออกประตูทางใต้ ลงใต้ดิน Duo Kobe เดินตามป้าย Harborland','South gate, down into the Duo Kobe underground mall, follow the Harborland signs','南口から地下街デュオこうべへ、ハーバーランドの案内に沿って')],
+          ['motomachi',15,X('ออกฝั่งใต้ เดินผ่าน Meriken Park และ Kobe Port Tower ไปทางตะวันตก','Leave on the south side, walk past Meriken Park and Kobe Port Tower, then west','南側に出て、メリケンパーク・ポートタワーを経て西へ')]]}
 ];
 const pn = p => tr(p.name);
-const pSub = p => (LANG === 'th' ? [p.name.en, p.name.ja] : LANG === 'en' ? [p.name.ja] : [p.name.en]).join(' · ');
+const pSub = p => (p.city ? [tr(p.city)] : []).concat(LANG === 'th' ? [p.name.en, p.name.ja] : LANG === 'en' ? [p.name.ja] : [p.name.en]).join(' · ');
+const pIcon = p => p.icon || CATS[p.cat].icon;
 
 /* ================= NETWORK LAYER (OpenStreetMap, data/osaka-network.js) ================= */
 // The generated file gives every Osaka Metro station and line in order. Hand-checked values in this file win:
@@ -635,19 +735,14 @@ const NEW_LINES = {
   yotsubashi:NL('Osaka Metro สาย Yotsubashi','Osaka Metro Yotsubashi Line','Osaka Metro 四つ橋線','Y','#0078be'),
   nagahori:NL('Osaka Metro สาย Nagahori Tsurumi-ryokuchi','Osaka Metro Nagahori Tsurumi-ryokuchi Line','Osaka Metro 長堀鶴見緑地線','N','#8cb43c'),
   imazatosuji:NL('Osaka Metro สาย Imazatosuji','Osaka Metro Imazatosuji Line','Osaka Metro 今里筋線','I','#ee7b1a'),
-  jrKobe:NL('JR Kobe Line','JR Kobe Line','JR神戸線','JR','#0072bc'),
   jrTozai:NL('JR Tozai Line','JR Tozai Line','JR東西線','JR','#e4007f'),
   jrYamatoji:NL('JR Yamatoji Line','JR Yamatoji Line','JR大和路線','JR','#00a95f'),
   jrHigashi:NL('JR Osaka Higashi Line','JR Osaka Higashi Line','JRおおさか東線','JR','#3a4ba0'),
   // Rapi:t α: KIX → Namba about 35–39 min (Wikipedia / Nankai); segment minutes set by hand, the estimate is far too slow
   rapit:NL('Nankai Rapi:t (ด่วนพิเศษ)','Nankai Rapi:t limited express','南海 特急ラピート','NK','#2b5aa8', {extra:700, minFix:[6,2,23,3,3],
     tip:X('ต้องซื้อตั๋วที่นั่ง Rapi:t เพิ่ม ¥700 · ตั๋วดิจิทัลรวมค่าโดยสาร ¥1,410 ถูกกว่า','Needs a Rapi:t seat ticket (+¥700); the ¥1,410 digital ticket incl. fare is cheaper','特急券+¥700が必要。運賃込みデジタルきっぷ¥1,410がお得')}),
-  hanshinMain:NL('Hanshin Main Line','Hanshin Main Line','阪神本線','HS','#00a0e9'),
-  hankyuKyoto:NL('Hankyu Kyoto Line','Hankyu Kyoto Line','阪急京都線','HK','#8c1d18'),
-  hankyuKobe:NL('Hankyu Kobe Line','Hankyu Kobe Line','阪急神戸線','HK','#8c1d18'),
   hankyuTakarazuka:NL('Hankyu Takarazuka Line','Hankyu Takarazuka Line','阪急宝塚線','HK','#8c1d18'),
   hankyuSenri:NL('Hankyu Senri Line','Hankyu Senri Line','阪急千里線','HK','#8c1d18'),
-  kintetsuNara:NL('Kintetsu Nara Line (Rapid Express)','Kintetsu Nara Line (Rapid Express)','近鉄奈良線（快速急行）','KT','#e2041b'),
   kintetsuOsaka:NL('Kintetsu Osaka Line','Kintetsu Osaka Line','近鉄大阪線','KT','#e2041b'),
   kintetsuMinami:NL('Kintetsu Minami-Osaka Line','Kintetsu Minami-Osaka Line','近鉄南大阪線','KT','#e2041b')
 };
@@ -698,6 +793,8 @@ function mergeNetwork(){
         });
       });
       Object.assign(old, {st:o.st, km, min, loop:old.loop || g.loop}); delete old.n;   // every generated segment is one stop
+      // fast trains: count only the stations they stop at (the generated line lists every local stop)
+      if(old.stopAt){ const at = new Set(old.stopAt); old.n = o.st.slice(1).map(s => at.has(s) ? 1 : 0); }
     } else {
       const a = NET.stations[o.st[0]], z = NET.stations[o.st[n - 1]], meta = NEW_LINES[id] || {};
       const fixed = meta.minFix && meta.minFix.length === min.length ? meta.minFix : min;
@@ -719,10 +816,12 @@ function mergeNetwork(){
   }
   // walking links between separate stations less than ~450 m apart (hand-written WALKS keep their minutes)
   const have = new Set(WALKS.map(([a, b]) => [a, b].sort().join('|')));
+  // close, but not transfers a visitor makes (they only create odd JR ↔ Hankyu/Hanshin detours on the way to Kyoto/Kobe)
+  const NO_WALK = new Set(['oyamazaki|yamazaki', 'settsuTonda|tonda', 'kishibe|shojaku', 'okamoto|settsuMotoyama', 'maya|nishinada', 'iwaya|nada']);
   const ids = Object.keys(ST).filter(s => !ST[s].bus);
   for(let i = 0; i < ids.length; i++) for(let j = i + 1; j < ids.length; j++){
     const a = ids[i], b = ids[j], d = hav(ST[a].ll, ST[b].ll);
-    if(d > .45 || have.has([a, b].sort().join('|'))) continue;
+    if(d > .45 || have.has([a, b].sort().join('|')) || NO_WALK.has([a, b].sort().join('|'))) continue;
     WALKS.push([a, b, Math.ceil(d * 1.3 * 1000 / 80) + 2]);
   }
 }
@@ -1080,7 +1179,7 @@ const SERVICE = {
     osaka:{0:L1('00:02'), 1:L1('00:03')}, tennoji:{0:L1('23:48'), 1:L1('23:58')}}},
   jrYume:{freq:{peak:6, day:15, eve:15, hday:15}, last:{
     nishikujo:{1:L1('00:14')}, universalCity:{0:L1('00:02')}}},
-  jrKyoto:{freq:{peak:3, day:4, eve:5, hday:4}, last:{
+  jrKyoto:{only:['shinOsaka','osaka'], freq:{peak:3, day:4, eve:5, hday:4}, last:{
     shinOsaka:{1:L1('00:41')}, osaka:{0:L1('00:10')}}},
   jrAir:{freq:{peak:15, day:15, eve:15, hday:15}, last:{
     kix:{1:L1('23:09')}, tennoji:{0:L1('22:45')}, osaka:{0:L1('22:24')}}},
@@ -1132,7 +1231,8 @@ function timing(r, now){
   r.steps.forEach((s, i) => {
     if(s.t === 'ride'){
       at += 2;
-      const f = freqOf(s.line, now), L = lastOf(s.line, s.from, s.dir, now);
+      const sv = SERVICE[s.line], ok = !sv || !sv.only || (sv.only.includes(s.from) && sv.only.includes(s.to));   // data not checked beyond that section
+      const f = ok ? freqOf(s.line, now) : null, L = ok ? lastOf(s.line, s.from, s.dir, now) : null;
       const st = !L ? null : at > L.min ? 'gone' : L.min - at <= 30 ? 'soon' : null;
       info[i] = {f, L, st, at};
       if(st === 'gone' || (st === 'soon' && worst !== 'gone')) worst = st;
@@ -1176,13 +1276,16 @@ setInterval(() => {
 // Sources (checked 2026-11-19): osaka-amazing-pass.com, subway.osakametro.co.jp (Enjoy Eco, digital tickets, Yookoshi 30h),
 // westjr.co.jp (ICOCA, WEST QR Kansai Area Pass), nankai.co.jp (Rapi:t digital ticket), surutto.com (Kansai Railway Pass Lite).
 const opOfLine = l => LINES[l] && LINES[l].op;
+// roughly Osaka city: west of the Kanzaki river (Amagasaki) and Kobe/Kyoto/Nara are outside
+const inCity = sid => { const [la, lo] = ST[sid].ll; return la > 34.57 && la < 34.76 && lo > 135.40 && lo < 135.58 && !(la > 34.69 && lo < 135.437); };
 const PASSES = [
   {id:'amazing', badge:true, attractions:true,
    name:X('Osaka Amazing Pass','Osaka Amazing Pass','大阪周遊パス'), short:X('Amazing Pass','Amazing Pass','周遊パス'),
    price:3500, priceText:X('1 วัน ¥3,500 · 2 วัน ¥5,000','1 day ¥3,500 · 2 days ¥5,000','1日 ¥3,500・2日 ¥5,000'),
    summary:X('ขึ้นรถไม่จำกัดในเมือง + เข้าสถานที่ท่องเที่ยวฟรีราว 40 แห่ง คุ้มถ้าเที่ยวหลายที่ในวันเดียว','Unlimited rides in the city plus free entry to about 40 attractions; pays off when you visit several in one day','市内乗り放題＋約40施設に無料入場。1日に何か所も回るならお得'),
    cover:s => { const op = opOfLine(s.line);
-     if(op === 'metro' || op === 'bus' || op === 'hanshin') return true;
+     if(op === 'metro' || op === 'bus') return true;
+     if(op === 'hanshin') return !s.from || (inCity(s.from) && inCity(s.to));
      if(s.line === 'nankai') return true;                                    // Namba–Sakai is inside the pass area
      if(s.line === 'nankaiAir') return !!s.from && s.from !== 'kix' && s.to !== 'kix';
      return false; },
@@ -1416,7 +1519,7 @@ const hereIcon = () => L.divIcon({className:'', html:`<div class="here"><span>${
 const hereMarker = L.marker(ORIGIN.ll, {zIndexOffset:900, interactive:false, icon:hereIcon()}).addTo(map);
 
 const pinIcon = (p, cls='') => L.divIcon({className:'', iconSize:[36,36], iconAnchor:[18,18],
-  html:`<div class="pin ${cls}" style="--c:${CATS[p.cat].color}">${svg(CATS[p.cat].icon)}<span>${pn(p)}</span></div>`});
+  html:`<div class="pin ${cls}" style="--c:${CATS[p.cat].color}">${svg(pIcon(p))}<span>${pn(p)}</span></div>`});
 const markers = {};
 PLACES.forEach(p => {
   markers[p.id] = L.marker(p.ll, {icon:pinIcon(p)}).addTo(map).on('click', ev => {
@@ -1485,7 +1588,7 @@ function renderPanel(){
       </div>
       <div class="sec list">${list.map(p => { const r = routesFor(p)[0]; return `
         <button class="place" data-place="${p.id}">
-          <span class="bub" style="--c:${CATS[p.cat].color}">${svg(CATS[p.cat].icon)}</span>
+          <span class="bub" style="--c:${CATS[p.cat].color}">${svg(pIcon(p))}</span>
           <span><span class="nm">${pn(p)}</span><br><span class="sb">${pSub(p)}</span></span>
           <span class="rt"><b>${r.min} ${t('min')}</b><span>${t('mode')[r.mode]} · ${price(r)}</span></span>
         </button>`; }).join('')}</div>`;
@@ -1570,9 +1673,9 @@ function clearPlace(){
   syncMarkers(); renderPanel(); drawRoute(); fitAll();
 }
 function fitAll(){
-  const ps = PLACES.filter(p => p.cat !== 'station' && (state.cat==='all' || p.cat===state.cat)).map(p => p.ll);
+  const ps = PLACES.filter(p => p.cat !== 'station' && (state.cat==='all' ? !CATS[p.cat].far : p.cat===state.cat)).map(p => p.ll);
   map.invalidateSize();
-  const far = ps.every(ll => hav(ORIGIN.ll, ll) > 15);
+  const far = ps.every(ll => hav(ORIGIN.ll, ll) > 15) && state.cat !== 'daytrip';
   map.fitBounds(L.latLngBounds(far ? ps : [ORIGIN.ll, ...ps]), {...pad(), maxZoom:15});
 }
 function closeMenus(){ $('suggest').classList.remove('open'); document.documentElement.classList.remove('suggesting'); }
@@ -1593,7 +1696,7 @@ function suggest(){
   const hits = PLACES.filter(p => p.cat !== 'station' && (!q || [p.name.th, p.name.en, p.name.ja, p.alias || ''].some(n => n.toLowerCase().includes(q))));
   const sts = stationHits(q);
   const placeLis = hits.map(p => `<li data-place="${p.id}">
-      <span class="bub" style="--c:${CATS[p.cat].color};width:30px;height:30px">${svg(CATS[p.cat].icon)}</span>
+      <span class="bub" style="--c:${CATS[p.cat].color};width:30px;height:30px">${svg(pIcon(p))}</span>
       <span>${pn(p)}<span class="sub">${pSub(p)}</span></span><em>${tr(CATS[p.cat].name)}</em></li>`);
   const stLis = sts.map(([sid, s]) => `<li data-station="${sid}">
       <span class="bub" style="--c:${CATS.station.color};width:30px;height:30px">${svg('train')}</span>
