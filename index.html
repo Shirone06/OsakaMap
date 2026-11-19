@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Osaka ไปไงดี</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,78 +13,88 @@
   --soft:#b8b3ff; --pri:#8f8df7; --acc:#ff5fa8;
   --bw:3px; --r:15px; --sh:5px 6px 0 var(--soft);
   --spring:cubic-bezier(.34,1.56,.64,1);
+  --font:Nunito,Kanit,"M PLUS Rounded 1c",system-ui,sans-serif;
+  --sheet-h:50vh;
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{color:var(--ink);background:var(--page);font:500 15px/1.45 Nunito,Kanit,"M PLUS Rounded 1c",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
-button,input{font:inherit;color:inherit}
-button{cursor:pointer;background:none;border:0;padding:0;text-align:left}
+body{color:var(--ink);background:var(--page);font:500 15px/1.45 var(--font);-webkit-font-smoothing:antialiased;overflow:hidden;overscroll-behavior:none}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0;text-align:left;-webkit-tap-highlight-color:transparent}
 #map{position:fixed;inset:0;background:#eeedf8}
 .leaflet-container{font:inherit}
 .leaflet-control-attribution{font-size:10px}
 .leaflet-tile-pane{filter:saturate(.55) brightness(1.04) hue-rotate(8deg)}
 
-/* ---------- floating column ---------- */
+/* ---------- floating column (desktop) ---------- */
 .ui{position:fixed;top:16px;left:16px;bottom:16px;width:410px;display:flex;flex-direction:column;gap:12px;z-index:1000;pointer-events:none}
 .ui>*{pointer-events:auto}
 
-/* search control: thick ink line + hard offset shadow */
-.search{position:relative;background:#fff;border:var(--bw) solid var(--ink);border-radius:var(--r);box-shadow:var(--sh);margin-right:6px}
-.brand{display:flex;align-items:baseline;gap:8px;padding:10px 14px 2px}
-.brand b{font:italic 800 21px/1 Nunito,Kanit,"M PLUS Rounded 1c",sans-serif;letter-spacing:-.2px}
+/* search: the one heavy-outlined control, so it reads as "start here" */
+.search{position:relative;z-index:2;flex:none;background:#fff;border:var(--bw) solid var(--ink);border-radius:var(--r);box-shadow:var(--sh);margin-right:6px}
+.brand{display:flex;align-items:baseline;gap:8px;padding:10px 14px 0}
+.brand b{font:italic 800 21px/1 var(--font);letter-spacing:-.2px}
 .brand span{font-size:11.5px;color:var(--mute);font-weight:600}
-.row{display:flex;align-items:center;gap:10px;width:100%;padding:9px 14px;min-height:46px}
-.row+.row{border-top:1px solid var(--line)}
-.row small{display:block;font-size:11px;color:var(--mute);font-weight:600;line-height:1.1}
-.row b{font-weight:700}
-.dot{flex:none;width:14px;height:14px;border-radius:50%;border:var(--bw) solid var(--ink);background:#fff}
-.dot.to{background:var(--acc)}
-.row .caret{margin-left:auto;color:var(--mute);transition:transform .25s var(--spring)}
-.row[aria-expanded=true] .caret{transform:rotate(180deg)}
-#q{flex:1;min-width:0;border:0;outline:0;background:none;font-weight:600;padding:4px 0}
+.row{display:flex;align-items:center;gap:8px;padding:7px 7px 7px 14px;min-height:52px}
+.dot{flex:none;width:14px;height:14px;border-radius:50%;border:var(--bw) solid var(--ink);background:var(--acc)}
+#q{flex:1;min-width:0;border:0;outline:0;background:none;font-weight:600;font-size:16px;padding:6px 0}
 #q::placeholder{color:var(--mute);font-weight:500}
-#clear{width:26px;height:26px;border-radius:50%;background:var(--chip);text-align:center;font-weight:800;color:var(--mute);display:none}
+#clear{flex:none;width:30px;height:30px;border-radius:50%;background:var(--chip);text-align:center;font-weight:800;color:var(--mute);display:none}
 .search.has-q #clear{display:block}
-.menu{position:absolute;left:-3px;right:-3px;top:calc(100% + 10px);margin:0;padding:6px;list-style:none;background:#fff;border:var(--bw) solid var(--ink);border-radius:var(--r);box-shadow:var(--sh);max-height:320px;overflow:auto;display:none;z-index:5;transform-origin:top center}
+
+/* compact pill around a native <select>: phones get their own picker */
+.sel{position:relative;flex:none;display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 10px;border-radius:999px;background:var(--chip);font-size:13px;font-weight:700;min-width:0}
+.sel svg{flex:none;width:16px;height:16px}
+.sel select{appearance:none;-webkit-appearance:none;min-width:0;max-width:100%;border:0;outline:0;background:none;padding:0 15px 0 0;font-weight:700;font-size:inherit;cursor:pointer;text-overflow:ellipsis}
+.sel::after{content:"▾";position:absolute;right:10px;font-size:11px;color:var(--mute);pointer-events:none}
+.sel:focus-within{box-shadow:0 0 0 2px var(--pri)}
+
+.menu{position:absolute;left:-3px;right:-3px;top:calc(100% + 10px);margin:0;padding:6px;list-style:none;background:#fff;border:var(--bw) solid var(--ink);border-radius:var(--r);box-shadow:var(--sh);max-height:min(360px,55vh);overflow:auto;display:none;transform-origin:top center}
 .menu.open{display:block;animation:pop .28s var(--spring)}
-.menu li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer}
-.menu li:hover,.menu li.hl{background:var(--chip)}
-.menu li.off{color:var(--mute);cursor:default}
-.menu li.off:hover{background:none}
-.menu li em{margin-left:auto;font-style:normal;font-size:11.5px;color:var(--mute);font-weight:600}
+.menu li{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer}
+.menu li:hover{background:var(--chip)}
+.menu li em{margin-left:auto;font-style:normal;font-size:11.5px;color:var(--mute);font-weight:600;white-space:nowrap}
 .menu li .sub{display:block;font-size:12px;color:var(--mute)}
 .menu .empty{color:var(--mute);cursor:default}
 
-/* pills */
-.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 6px 4px 0;scrollbar-width:none}
+/* panel */
+.panel{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 30px rgba(29,26,74,.13);margin-right:6px}
+.grab{display:none}
+.pbody{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom)}
+.panel h2{font-size:15px;font-weight:700;margin:0}
+.sec{padding:14px 16px}
+.sec+.sec{border-top:1px solid var(--line)}
+.sec.list{padding:6px 8px}
+
+/* sticky sheet header: origin, filters, place title */
+.shead{position:sticky;top:0;z-index:2;background:#fff;padding:14px 16px 12px;border-bottom:1px solid var(--line)}
+.from{display:flex;align-items:center;gap:8px;min-width:0;margin-top:10px;font-size:12.5px;font-weight:700;color:var(--mute)}
+.shead>.from:first-child{margin-top:0}
+.from .sel{flex:0 1 auto;background:#fff;border:2px solid var(--ink);color:var(--ink)}
+.from .dist{margin-left:auto;white-space:nowrap;font-weight:600}
+.phead{display:flex;align-items:center;gap:10px}
+.back{flex:none;width:36px;height:36px;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center;font-size:24px;font-weight:800;line-height:1;padding-bottom:3px;transition:transform .25s var(--spring),background .15s}
+.back:hover{background:var(--chip)}
+.back:active{transform:scale(.9)}
+.pt{min-width:0}
+.title{font:italic 800 22px/1.2 var(--font);letter-spacing:-.2px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.names{color:var(--mute);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.desc{font-size:13.5px;margin:0}
+
+/* category pills */
+.chips{display:flex;gap:6px;overflow-x:auto;margin:10px -16px 0;padding:0 16px 2px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
-.pill{flex:none;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:13px;font-weight:600;white-space:nowrap;transition:transform .25s var(--spring),background .15s}
+.pill{flex:none;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:13px;font-weight:600;white-space:nowrap;transition:transform .25s var(--spring),background .15s}
 .pill:hover{background:var(--chip)}
 .pill:active{transform:scale(.92)}
 .pill.on{background:var(--ink);border-color:var(--ink);color:#fff}
 .pill i{width:9px;height:9px;border-radius:50%;background:var(--c);border:1.5px solid var(--ink)}
 .pill.on i{border-color:#fff}
 
-/* language switch: segmented control, top-right on desktop, beside the chips on mobile */
-.bar{display:flex;align-items:center;gap:8px;min-width:0}
-.bar .chips{flex:1;min-width:0}
-.lang{position:fixed;top:14px;right:14px;z-index:1001;display:flex;background:#fff;border:var(--bw) solid var(--ink);border-radius:12px;box-shadow:4px 5px 0 var(--soft);overflow:hidden}
-.lang button{padding:6px 12px;font-size:13px;font-weight:700;line-height:1.2;white-space:nowrap;transition:background .15s,transform .25s var(--spring)}
-.lang button+button{border-left:2px solid var(--ink)}
-.lang button:hover{background:var(--chip)}
-.lang button:active{transform:scale(.92)}
-.lang button.on{background:var(--ink);color:#fff}
-
-/* panel: thin line card */
-.panel{flex:1;min-height:0;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 30px rgba(29,26,74,.13);margin-right:6px}
-.panel h2{font-size:15px;font-weight:700;margin:0}
-.panel .hint{font-size:12.5px;color:var(--mute);margin:2px 0 0}
-.sec{padding:14px 16px}
-.sec+.sec{border-top:1px solid var(--line)}
-
-.place{display:flex;align-items:center;gap:12px;width:100%;padding:9px 8px;border-radius:12px;transition:transform .25s var(--spring),background .15s}
+.place{display:flex;align-items:center;gap:12px;width:100%;padding:10px 8px;border-radius:12px;transition:transform .25s var(--spring),background .15s}
 .place:hover{background:var(--chip)}
 .place:active{transform:scale(.97)}
+.place>span:nth-child(2){min-width:0}
 .bub{flex:none;width:36px;height:36px;border-radius:50%;background:var(--c);border:2.5px solid var(--ink);display:grid;place-items:center}
 .bub svg{width:18px;height:18px}
 .place .nm{font-weight:700;line-height:1.25}
@@ -93,28 +103,20 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left}
 .place .rt b{display:block;font-weight:800}
 .place .rt span{font-size:11.5px;color:var(--mute)}
 
-.back{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:700;color:var(--mute);margin-bottom:8px}
-.back:hover{color:var(--ink)}
-.title{font:italic 800 24px/1.15 Nunito,Kanit,"M PLUS Rounded 1c",sans-serif;letter-spacing:-.2px;margin:0}
-.names{color:var(--mute);font-size:13px;margin:3px 0 8px}
-.desc{font-size:13.5px;margin:0}
-.fromto{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;margin-top:10px;color:var(--mute)}
-.fromto b{color:var(--ink)}
-
 /* route cards */
 .route{display:block;width:100%;border:1px solid var(--line);border-radius:14px;background:#fff;margin-top:10px;transition:transform .3s var(--spring),box-shadow .2s,border-color .2s}
 .route:first-of-type{margin-top:12px}
 .route.open{border:var(--bw) solid var(--ink);box-shadow:var(--sh);margin-bottom:16px}
 .route-head{display:block;width:100%;padding:12px 14px}
 .route-head:active{transform:scale(.98)}
-.r1{display:flex;align-items:center;gap:8px}
+.r1{display:flex;align-items:center;gap:8px;min-width:0}
 .mode{flex:none;width:30px;height:30px;border-radius:9px;background:var(--chip);display:grid;place-items:center}
 .route.open .mode{background:var(--soft)}
 .mode svg{width:18px;height:18px}
-.r1 .ttl{font-weight:700}
-.tag{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--acc);color:#fff;transform:rotate(-3deg)}
-.r1 .time{margin-left:auto;font:italic 800 19px/1 Nunito,Kanit,"M PLUS Rounded 1c",sans-serif;white-space:nowrap}
-.r1 .time small{font:600 12px Nunito,Kanit,"M PLUS Rounded 1c",sans-serif;color:var(--mute);font-style:normal}
+.r1 .ttl{min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{flex:none;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--acc);color:#fff;transform:rotate(-3deg)}
+.r1 .time{flex:none;margin-left:auto;font:italic 800 19px/1 var(--font);white-space:nowrap}
+.r1 .time small{font:600 12px var(--font);color:var(--mute);font-style:normal}
 .r2{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;font-size:12.5px;color:var(--mute);font-weight:600}
 .r2 .price{color:var(--ink);font-weight:800}
 .r2 .sep{opacity:.5}
@@ -130,7 +132,7 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left}
 .step .node{flex:none;width:16px;height:16px;border-radius:50%;background:#fff;border:var(--bw) solid var(--ink)}
 .step .bar{flex:1;width:6px;margin:3px 0 -9px;border-radius:3px;background:var(--c)}
 .step.walk .bar,.step.taxi .bar{background:repeating-linear-gradient(var(--mute) 0 5px,transparent 5px 10px)}
-.step .body{padding:9px 0 9px}
+.step .body{padding:9px 0 9px;min-width:0}
 .step .hd{font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .step .meta{font-size:12.5px;color:var(--mute)}
 .step .tip{display:inline-block;margin-top:5px;font-size:12.5px;background:var(--chip);border-radius:9px;padding:5px 9px}
@@ -150,10 +152,8 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left}
 .here::after{content:"";position:absolute;inset:-12px;border-radius:50%;border:3px solid var(--pri);animation:ping 1.8s ease-out infinite}
 .here span{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%) rotate(-3deg);white-space:nowrap;background:var(--ink);color:#fff;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:700}
 .stn{width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--ink)}
-.leaflet-tooltip.stn-tip{background:#fff;border:2px solid var(--ink);border-radius:8px;color:var(--ink);font:700 11.5px Nunito,Kanit,"M PLUS Rounded 1c",sans-serif;padding:1px 6px;box-shadow:none}
+.leaflet-tooltip.stn-tip{background:#fff;border:2px solid var(--ink);border-radius:8px;color:var(--ink);font:700 11.5px var(--font);padding:1px 6px;box-shadow:none}
 .leaflet-tooltip.stn-tip::before{display:none}
-
-.mock{position:fixed;right:14px;top:62px;z-index:1000;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--mute)}
 
 @keyframes pop{from{transform:scale(.9) translateY(-8px);opacity:0}}
 @keyframes drop{from{transform:translateY(-8px);opacity:0}}
@@ -161,13 +161,24 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left}
 @keyframes ping{from{transform:scale(.5);opacity:1}to{transform:scale(1.5);opacity:0}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
+/* ---------- phone: one-line search on top, draggable bottom sheet ---------- */
 @media (max-width:720px){
-  .ui{top:10px;left:10px;right:10px;bottom:auto;width:auto;gap:8px}
-  .panel{position:fixed;left:0;right:0;bottom:0;max-height:46vh;margin:0;border-radius:20px 20px 0 0;border-width:1px 0 0}
-  .mock{display:none}
+  .ui{top:10px;left:10px;right:10px;bottom:auto;width:auto;gap:0}
+  .search{margin:0;box-shadow:3px 4px 0 var(--soft)}
   .brand{display:none}
-  .lang{position:static;flex:none;box-shadow:3px 4px 0 var(--soft);margin:0 2px 4px 0}
-  .lang button{padding:5px 9px;font-size:12.5px}
+  .row{min-height:50px;padding:6px 6px 6px 14px}
+  .panel{position:fixed;left:0;right:0;bottom:0;height:var(--sheet-h);margin:0;border:0;border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(29,26,74,.16);transition:height .38s var(--spring)}
+  .panel.dragging{transition:none}
+  .grab{display:block;flex:none;height:24px;position:relative;cursor:grab;touch-action:none}
+  .grab::before{content:"";position:absolute;left:50%;top:9px;width:42px;height:5px;margin-left:-21px;border-radius:3px;background:var(--line)}
+  .shead{padding:0 16px 12px}
+  .shead,.shead *{touch-action:pan-x}
+  .title{font-size:20px}
+  .desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .route .passes{display:none}
+  .route.open .passes{display:flex}
+  .leaflet-control-zoom{display:none}
+  .leaflet-bottom{bottom:var(--sheet-h);transition:bottom .38s var(--spring)}
 }
 </style>
 </head>
@@ -177,27 +188,22 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left}
 <div class="ui">
   <div class="search" id="search">
     <div class="brand"><b id="brand"></b><span id="tagline"></span></div>
-    <button class="row" id="originBtn" aria-expanded="false">
+    <div class="row">
       <span class="dot"></span>
-      <span><small id="originLabel"></small><b id="originName"></b></span>
-      <span class="caret">▾</span>
-    </button>
-    <label class="row">
-      <span class="dot to"></span>
-      <input id="q" autocomplete="off">
-      <button id="clear">×</button>
-    </label>
-    <ul class="menu" id="originMenu"></ul>
+      <input id="q" autocomplete="off" enterkeyhint="search">
+      <button id="clear" type="button">×</button>
+      <label class="sel" title="Language">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1d1a4a" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3.6 5.2 3.6 8.5s-1.2 6.2-3.6 8.5c-2.4-2.3-3.6-5.2-3.6-8.5S9.6 5.8 12 3.5z"/></svg>
+        <select id="lang" aria-label="Language"><option value="th">ไทย</option><option value="en">EN</option><option value="ja">日本語</option></select>
+      </label>
+    </div>
     <ul class="menu" id="suggest"></ul>
   </div>
-  <div class="bar">
-    <div class="lang" id="lang" role="group" aria-label="Language"></div>
-    <div class="chips" id="chips"></div>
-  </div>
-  <aside class="panel" id="panel"></aside>
+  <aside class="panel" id="panel">
+    <div class="grab" aria-hidden="true"></div>
+    <div class="pbody" id="pbody"></div>
+  </aside>
 </div>
-<div class="mock" id="mock"></div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 /* ================= I18N ================= */
@@ -210,7 +216,7 @@ const tr = x => (x == null || typeof x === 'string') ? x : (x[LANG] || x.en || x
 const UI = {
   th:{
     brand:'Osaka ไปไงดี', tagline:'เลือกที่หมาย แล้วดูทุกวิธีไป', origin:'ต้นทาง',
-    placeholder:'อยากไปไหน? เช่น ปราสาทโอซาก้า, USJ', clear:'ล้างคำค้น', mock:'Mockup · เวลาเป็นค่าประมาณ', here:'คุณอยู่ที่นี่',
+    placeholder:'อยากไปไหน?', clear:'ล้างคำค้น', mock:'Mockup · เวลาเป็นค่าประมาณ', here:'คุณอยู่ที่นี่',
     listTitle:o => `จาก ${o} ไปไหนดี`, listHint:'จิ้มหมุดบนแผนที่ หรือเลือกจากรายการ · เรียงจากใกล้ไปไกล',
     min:'นาที', back:'‹ สถานที่ทั้งหมด', away:k => `ห่าง ${k} กม.`, howTitle:'ไปยังไงได้บ้าง', ways:n => `${n} วิธี`,
     note:'ค่าโดยสารและระยะทางตรวจกับตารางของผู้ให้บริการแล้ว (พ.ย. 2026) · เวลาเดินทางเป็นค่าโดยประมาณ ไม่รวมเวลารอรถ',
@@ -226,7 +232,7 @@ const UI = {
   },
   en:{
     brand:'Osaka Route Finder', tagline:'Pick a place, see every way there', origin:'From',
-    placeholder:'Where to? e.g. Osaka Castle, USJ', clear:'Clear search', mock:'Mockup · times are estimates', here:'You are here',
+    placeholder:'Where to?', clear:'Clear search', mock:'Mockup · times are estimates', here:'You are here',
     listTitle:o => `Where to from ${o}?`, listHint:'Tap a pin on the map or pick from the list · nearest first',
     min:'min', back:'‹ All places', away:k => `${k} km away`, howTitle:'How to get there', ways:n => `${n} option${n > 1 ? 's' : ''}`,
     note:'Fares and distances checked against operator tables (Nov 2026) · travel times are estimates and exclude waiting',
@@ -242,7 +248,7 @@ const UI = {
   },
   ja:{
     brand:'大阪どう行く？', tagline:'行き先を選んで行き方を比較', origin:'出発地',
-    placeholder:'どこへ行く？ 例：大阪城、USJ', clear:'検索をクリア', mock:'モックアップ・所要時間は目安', here:'現在地',
+    placeholder:'どこへ行く？', clear:'検索をクリア', mock:'モックアップ・所要時間は目安', here:'現在地',
     listTitle:o => `${o}からどこへ？`, listHint:'地図のピンをタップ、またはリストから選択・近い順',
     min:'分', back:'‹ スポット一覧', away:k => `約${k}km`, howTitle:'行き方', ways:n => `${n}通り`,
     note:'運賃・距離は各社の運賃表で確認済み（2026年11月）・所要時間は目安で、待ち時間は含みません',
@@ -595,6 +601,13 @@ const price = r => r.yenText || (r.yen ? '¥'+r.yen.toLocaleString('en-US') : t(
 const transfers = r => Math.max(0, r.steps.filter(s => s.t==='ride').length - 1);
 const walkMin = r => r.steps.filter(s => s.t==='walk').reduce((a,s) => a+s.min, 0);
 
+/* ================= BOTTOM SHEET (phone) ================= */
+// Three resting heights: peek (header only), half, full. Drag the handle or the header; tap the handle to toggle.
+const SHEET = {snap:'half'};
+const sheetPx = s => { const H = innerHeight; return s === 'peek' ? 164 : s === 'half' ? Math.round(H * .5) : H - 72; };
+const applySheet = px => document.documentElement.style.setProperty('--sheet-h', px + 'px');
+function setSheet(s){ SHEET.snap = s; applySheet(sheetPx(s)); }
+
 /* ================= MAP ================= */
 const map = L.map('map', {zoomControl:false}).setView([34.668,135.49], 13);
 L.control.zoom({position:'bottomright'}).addTo(map);
@@ -611,10 +624,11 @@ const markers = {};
 PLACES.forEach(p => {
   markers[p.id] = L.marker(p.ll, {icon:pinIcon(p)}).addTo(map).on('click', () => selectPlace(p.id));
 });
-map.on('click', () => { closeMenus(); });
+// tapping empty map on a phone lowers the sheet so the map is easier to see
+map.on('click', () => { closeMenus(); if(isMobile() && SHEET.snap !== 'peek') setSheet('peek'); });
 
 function pad(){ return isMobile()
-  ? {paddingTopLeft:[30,130], paddingBottomRight:[30, innerHeight*0.46+20]}
+  ? {paddingTopLeft:[28, 92], paddingBottomRight:[28, sheetPx(SHEET.snap) + 20]}
   : {paddingTopLeft:[460,60], paddingBottomRight:[60,60]}; }
 
 function syncMarkers(){
@@ -648,47 +662,47 @@ function drawRoute(fit = true){
 }
 
 /* ================= UI RENDER ================= */
-function renderLang(){
-  $('lang').innerHTML = LANGS.map(([k,label]) => `<button data-lang="${k}" class="${k===LANG?'on':''}" aria-pressed="${k===LANG}">${label}</button>`).join('');
-}
 function renderStatic(){
   document.documentElement.lang = LANG;
   document.title = t('brand');
   $('brand').textContent = t('brand'); $('tagline').textContent = t('tagline');
-  $('originLabel').textContent = t('origin');
   $('q').placeholder = t('placeholder'); $('clear').setAttribute('aria-label', t('clear'));
-  $('mock').textContent = t('mock');
+  $('lang').value = LANG;
 }
-function renderChips(){
-  $('chips').innerHTML = Object.entries(CATS).map(([k,c]) =>
-    `<button class="pill ${state.cat===k?'on':''}" data-cat="${k}">${c.color?`<i style="--c:${c.color}"></i>`:''}${tr(c.name)}</button>`).join('');
-}
+const originSelect = () => `<label class="sel"><select id="origin" aria-label="${t('origin')}">${ORIGINS.map(o =>
+  `<option value="${o.id}"${o === ORIGIN ? ' selected' : ''}>${tr(o.name)}</option>`).join('')}</select></label>`;
+const chipsHtml = () => `<div class="chips">${Object.entries(CATS).map(([k,c]) =>
+  `<button class="pill ${state.cat===k?'on':''}" data-cat="${k}">${c.color?`<i style="--c:${c.color}"></i>`:''}${tr(c.name)}</button>`).join('')}</div>`;
 
 function renderPanel(){
-  const el = $('panel'), on = tr(ORIGIN.name);
+  const el = $('pbody');
   if(!state.place){
     const list = PLACES.filter(p => state.cat==='all' || p.cat===state.cat)
       .sort((a,b) => km(ORIGIN.ll,a.ll) - km(ORIGIN.ll,b.ll));
-    el.innerHTML = `<div class="sec"><h2>${t('listTitle', on)}</h2>
-      <p class="hint">${t('listHint')}</p></div>
-      <div class="sec" style="padding:8px">${list.map(p => { const r = routesFor(p)[0]; return `
+    el.innerHTML = `<div class="shead">
+        <div class="from"><span>${t('origin')}</span>${originSelect()}</div>
+        ${chipsHtml()}
+      </div>
+      <div class="sec list">${list.map(p => { const r = routesFor(p)[0]; return `
         <button class="place" data-place="${p.id}">
           <span class="bub" style="--c:${CATS[p.cat].color}">${svg(CATS[p.cat].icon)}</span>
           <span><span class="nm">${pn(p)}</span><br><span class="sb">${pSub(p)}</span></span>
           <span class="rt"><b>${r.min} ${t('min')}</b><span>${t('mode')[r.mode]} · ${price(r)}</span></span>
         </button>`; }).join('')}</div>`;
+    el.scrollTop = 0;
     return;
   }
   const p = byId(state.place), rs = routesFor(p);
-  el.innerHTML = `<div class="sec">
-      <button class="back" data-back>${t('back')}</button>
-      <h1 class="title">${pn(p)}</h1>
-      <div class="names">${pSub(p)} · ${t('away', km(ORIGIN.ll,p.ll).toFixed(1))}</div>
-      <p class="desc">${tr(p.desc)}</p>
+  el.innerHTML = `<div class="shead">
+      <div class="phead">
+        <button class="back" data-back aria-label="${t('back').replace('‹','').trim()}">‹</button>
+        <div class="pt"><h1 class="title">${pn(p)}</h1><div class="names">${pSub(p)}</div></div>
+      </div>
+      <div class="from"><span>${t('origin')}</span>${originSelect()}<span class="dist">${t('away', km(ORIGIN.ll,p.ll).toFixed(1))}</span></div>
     </div>
+    <div class="sec"><p class="desc">${tr(p.desc)}</p></div>
     <div class="sec">
       <h2>${t('howTitle')} <span style="color:var(--mute);font-weight:600">${t('ways', rs.length)}</span></h2>
-      <div class="fromto"><b>${on}</b> → <b>${pn(p)}</b></div>
       ${rs.map((r,i) => routeCard(r,i,p)).join('')}
       <p class="note">${t('note')}</p>
     </div>`;
@@ -709,7 +723,7 @@ function routeCard(r, i, p){
       <div class="r1"><span class="mode">${svg(r.mode)}</span><span class="ttl">${routeTitle(r)}</span>
         ${r.tag?`<span class="tag">${t('tag')[r.tag]}</span>`:''}<span class="time">${r.min} <small>${t('min')}</small></span></div>
       <div class="r2">${chain}${bits.join('<span class="sep">·</span>')}</div>
-      ${pass?`<div class="r2">${pass}</div>`:''}
+      ${pass?`<div class="r2 passes">${pass}</div>`:''}
     </button>
     ${open ? `<div class="steps">${r.steps.map(stepRow).join('')}
       <div class="step end"><div class="lane"><span class="node"></span></div>
@@ -742,10 +756,12 @@ function stepRow(s){
 function selectPlace(id){
   state.place = id; state.route = 0;
   $('q').value = pn(byId(id)); $('search').classList.add('has-q');
-  closeMenus(); syncMarkers(); renderPanel(); drawRoute();
+  closeMenus(); if(isMobile()) setSheet('half');
+  syncMarkers(); renderPanel(); drawRoute();
 }
 function clearPlace(){
   state.place = null; $('q').value = ''; $('search').classList.remove('has-q');
+  if(isMobile()) setSheet('half');
   syncMarkers(); renderPanel(); drawRoute(); fitAll();
 }
 function fitAll(){
@@ -754,10 +770,7 @@ function fitAll(){
   const far = ps.every(ll => hav(ORIGIN.ll, ll) > 15);
   map.fitBounds(L.latLngBounds(far ? ps : [ORIGIN.ll, ...ps]), {...pad(), maxZoom:15});
 }
-function closeMenus(){
-  $('suggest').classList.remove('open'); $('originMenu').classList.remove('open');
-  $('originBtn').setAttribute('aria-expanded','false');
-}
+function closeMenus(){ $('suggest').classList.remove('open'); }
 function suggest(){
   const q = $('q').value.trim().toLowerCase();
   const hits = PLACES.filter(p => !q || [p.name.th, p.name.en, p.name.ja, p.alias || ''].some(n => n.toLowerCase().includes(q)));
@@ -765,17 +778,12 @@ function suggest(){
       <span class="bub" style="--c:${CATS[p.cat].color};width:30px;height:30px">${svg(CATS[p.cat].icon)}</span>
       <span>${pn(p)}<span class="sub">${pSub(p)}</span></span><em>${tr(CATS[p.cat].name)}</em></li>`).join('')
     : `<li class="empty">${t('noPlace')}</li>`;
-  $('originMenu').classList.remove('open');
   $('suggest').classList.add('open');
-}
-function renderOrigins(){
-  $('originName').textContent = tr(ORIGIN.name);
-  $('originMenu').innerHTML = ORIGINS.map(o => `<li class="${o===ORIGIN?'hl':''}" data-origin="${o.id}"><span class="dot"></span>${tr(o.name)}${o===ORIGIN?`<em>${t('selected')}</em>`:''}</li>`).join('');
 }
 function setOrigin(id){
   ORIGIN = ORIGINS.find(o => o.id === id); state.route = 0;
   hereMarker.setLatLng(ORIGIN.ll);
-  closeMenus(); renderOrigins(); renderPanel();
+  renderPanel();
   if(state.place) drawRoute(); else fitAll();
 }
 function setLang(l){
@@ -784,10 +792,10 @@ function setLang(l){
 }
 // Re-render every piece of text in the current language, keeping the map view and open route as they are
 function renderAll(){
-  renderStatic(); renderLang(); renderChips(); renderOrigins(); syncMarkers();
+  renderStatic(); syncMarkers();
   hereMarker.setIcon(hereIcon());
   if(state.place) $('q').value = pn(byId(state.place));
-  const top = $('panel').scrollTop; renderPanel(); $('panel').scrollTop = top;
+  const top = $('pbody').scrollTop; renderPanel(); $('pbody').scrollTop = top;
   drawRoute(false);
 }
 
@@ -800,25 +808,50 @@ $('q').addEventListener('keydown', e => {
 });
 $('clear').addEventListener('click', e => { e.preventDefault(); clearPlace(); });
 $('suggest').addEventListener('mousedown', e => { const li = e.target.closest('li[data-place]'); if(li){ e.preventDefault(); selectPlace(li.dataset.place); $('q').blur(); } });
-$('originBtn').addEventListener('click', () => {
-  const m = $('originMenu'), open = !m.classList.contains('open');
-  closeMenus(); m.classList.toggle('open', open); $('originBtn').setAttribute('aria-expanded', open);
-});
-$('originMenu').addEventListener('click', e => { const li = e.target.closest('[data-origin]'); if(li) setOrigin(li.dataset.origin); });
-$('lang').addEventListener('click', e => { const b = e.target.closest('[data-lang]'); if(b && b.dataset.lang !== LANG) setLang(b.dataset.lang); });
-$('chips').addEventListener('click', e => {
-  const b = e.target.closest('[data-cat]'); if(!b) return;
-  state.cat = b.dataset.cat; renderChips();
-  if(state.place) clearPlace(); else { syncMarkers(); renderPanel(); fitAll(); }
-});
+$('lang').addEventListener('change', e => setLang(e.target.value));
+$('panel').addEventListener('change', e => { if(e.target.id === 'origin') setOrigin(e.target.value); });
 $('panel').addEventListener('click', e => {
-  const pl = e.target.closest('[data-place]'), rt = e.target.closest('[data-route]');
-  if(pl) selectPlace(pl.dataset.place);
-  else if(rt){ state.route = +rt.dataset.route; const top = $('panel').scrollTop; renderPanel(); $('panel').scrollTop = top; drawRoute(); }
+  const cat = e.target.closest('[data-cat]'), pl = e.target.closest('[data-place]'), rt = e.target.closest('[data-route]');
+  if(cat){ if(cat.dataset.cat !== state.cat){ state.cat = cat.dataset.cat; syncMarkers(); renderPanel(); fitAll(); } }
+  else if(pl) selectPlace(pl.dataset.place);
+  else if(rt){ state.route = +rt.dataset.route; const top = $('pbody').scrollTop; renderPanel(); $('pbody').scrollTop = top; drawRoute(); }
   else if(e.target.closest('[data-back]')) clearPlace();
+  else if(isMobile() && e.target.closest('.grab')) setSheet(SHEET.snap === 'half' ? 'full' : 'half');
 });
 document.addEventListener('mousedown', e => { if(!e.target.closest('#search')) closeMenus(); });
 
+// sheet dragging
+let drag = null, justDragged = false;
+$('panel').addEventListener('pointerdown', e => {
+  if(!isMobile() || !e.target.closest('.grab, .shead') || e.target.closest('select')) return;
+  drag = {id:e.pointerId, y:e.clientY, h:sheetPx(SHEET.snap), t:performance.now(), moved:false};
+});
+addEventListener('pointermove', e => {
+  if(!drag || e.pointerId !== drag.id) return;
+  const dy = drag.y - e.clientY;
+  if(!drag.moved){ if(Math.abs(dy) < 6) return; drag.moved = true; $('panel').classList.add('dragging'); }
+  applySheet(Math.max(120, Math.min(innerHeight - 60, drag.h + dy)));
+});
+function endDrag(e, cancel){
+  if(!drag || e.pointerId !== drag.id) return;
+  const d = drag; drag = null;
+  $('panel').classList.remove('dragging');
+  if(!d.moved) return;
+  justDragged = true; setTimeout(() => justDragged = false, 0);
+  if(cancel) return setSheet(SHEET.snap);
+  const dy = d.y - e.clientY, h = d.h + dy, v = dy / Math.max(1, performance.now() - d.t);   // v > 0 = flicked up
+  const snaps = ['peek','half','full'].map(s => [s, sheetPx(s)]);
+  let s = snaps.reduce((a,b) => Math.abs(b[1]-h) < Math.abs(a[1]-h) ? b : a)[0];
+  if(v > .5) s = (snaps.find(([,px]) => px > h + 8) || snaps[2])[0];
+  if(v < -.5) s = ([...snaps].reverse().find(([,px]) => px < h - 8) || snaps[0])[0];
+  setSheet(s);
+}
+addEventListener('pointerup', e => endDrag(e));
+addEventListener('pointercancel', e => endDrag(e, true));
+$('panel').addEventListener('click', e => { if(justDragged){ e.stopPropagation(); e.preventDefault(); } }, true);
+addEventListener('resize', () => applySheet(sheetPx(SHEET.snap)));
+
+setSheet('half');
 renderAll(); fitAll();
 </script>
 </body>
