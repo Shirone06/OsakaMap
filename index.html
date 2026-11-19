@@ -223,11 +223,14 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left;-webkit
 .route.gone .hint{margin:8px 0 0;font-size:12px;color:#be123c;font-weight:700}
 
 /* ---------- passes page ---------- */
+.pass-fab{position:fixed;top:16px;right:16px;z-index:1001;display:flex;align-items:center;gap:8px;height:46px;padding:0 18px 0 12px;background:#fff;border:var(--bw) solid var(--ink);border-radius:999px;box-shadow:var(--sh);font-size:14.5px;font-weight:800;white-space:nowrap;transition:opacity .2s,transform .25s var(--spring)}
+.pass-fab:hover{transform:translateY(-1px) rotate(-1.5deg)}
+.pass-fab svg{flex:none;width:24px;height:24px}
 .ico{flex:none;width:34px;height:34px;border-radius:50%;background:var(--chip);display:grid;place-items:center}
 .ico svg{width:19px;height:19px}
-.pages{position:fixed;inset:0;z-index:2000;display:flex;justify-content:flex-start;background:rgba(29,26,74,.28);animation:vIn .2s ease-out}
+.pages{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(29,26,74,.35);animation:vIn .2s ease-out}
 .pages[hidden]{display:none}
-.pwrap{width:min(100%,460px);height:100%;margin-left:16px;display:flex;flex-direction:column;background:#fff;border-left:1px solid var(--line);border-right:1px solid var(--line);box-shadow:0 10px 30px rgba(29,26,74,.2);animation:pIn .32s var(--spring)}
+.pwrap{width:min(100%,1120px);height:100%;display:flex;flex-direction:column;overflow:hidden;background:#fff;border:var(--bw) solid var(--ink);border-radius:20px;box-shadow:6px 7px 0 var(--soft);animation:pIn .32s var(--spring)}
 .p2head{flex:none;display:flex;align-items:center;gap:12px;padding:max(12px,env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line)}
 .p2head h2{margin:0;font:italic 800 21px/1.2 var(--font)}
 .p2head .vbtn{box-shadow:3px 4px 0 var(--soft)}
@@ -255,7 +258,16 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left;-webkit
 .cmp{border-collapse:separate;border-spacing:0;font-size:12.5px;min-width:100%}
 .cmp th,.cmp td{padding:7px 8px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
 .cmp thead th{font-size:11.5px;color:var(--mute);font-weight:700}
-.cmp tbody th{text-align:left;font-weight:700;position:sticky;left:0;background:#fff}
+.cmp tbody th,.cmp thead th:first-child{text-align:left;font-weight:700;position:sticky;left:0;z-index:1;background:#fff;box-shadow:inset -1px 0 0 var(--line)}
+.cmp tbody th{cursor:pointer}
+.cmp tbody th:hover{color:var(--acc)}
+.cmp td sup{font-size:9px;margin-left:1px}
+.legend{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--chip);font-size:12px;line-height:1.5}
+.legend .keys{display:flex;flex-wrap:wrap;gap:4px 14px;font-weight:700}
+.legend .m-yes{color:#166534}.legend .m-part{color:#c2410c}.legend .m-no{color:var(--mute)}
+.legend .keys b{display:inline-grid;place-items:center;width:20px}
+.legend ol{margin:6px 0 0;padding-left:18px;color:var(--ink)}
+.legend li{margin-top:2px}
 .cmp .m-yes{color:#166534;font-weight:800}
 .cmp .m-part{color:#c2410c;font-weight:800}
 .cmp .m-no{color:var(--line);font-weight:800}
@@ -272,7 +284,16 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left;-webkit
 .pcard .ng{color:#be123c;font-weight:700}
 .pass[data-pass]{cursor:pointer}
 @keyframes pUp{from{transform:translateY(30px);opacity:0}}
-@keyframes pIn{from{transform:translateX(-24px);opacity:0}}
+@keyframes pIn{from{transform:scale(.96);opacity:0}}
+/* wide screens: planner and comparison side by side, pass cards in a grid */
+.pcards{display:grid;gap:12px}
+.pcards .pcard{margin:0}
+@media (min-width:900px){
+  .pgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .pgrid>.psec+.psec{border-top:0;border-left:1px solid var(--line)}
+  .pcards{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+  .p2head h2{font-size:24px}
+}
 @keyframes flash{0%,40%{box-shadow:0 0 0 3px var(--acc)}100%{box-shadow:0 0 0 0 transparent}}
 
 /* ---------- phone: one-line search on top, draggable bottom sheet ---------- */
@@ -293,7 +314,11 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left;-webkit
   .route.open .passes{display:flex}
   .leaflet-control-zoom{display:none}
   .pages{background:none}
-  .pwrap{width:100%;margin:0;border:0;animation:pUp .32s var(--spring)}
+  .pass-fab{top:72px;right:10px;height:40px;padding:0 14px 0 10px;font-size:13px;box-shadow:3px 4px 0 var(--soft)}
+  .pass-fab svg{width:21px;height:21px}
+  html[data-sheet=full] .pass-fab{opacity:0;pointer-events:none}
+  .pages{padding:0}
+  .pwrap{width:100%;height:100%;border:0;border-radius:0;box-shadow:none;animation:pUp .32s var(--spring)}
   .leaflet-bottom{bottom:var(--sheet-h);transition:bottom .38s var(--spring)}
 }
 </style>
@@ -308,7 +333,6 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left;-webkit
       <span class="dot"></span>
       <input id="q" autocomplete="off" enterkeyhint="search">
       <button id="clear" type="button">×</button>
-      <button class="ico" id="passBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="#1d1a4a" stroke-width="2" stroke-linejoin="round"><path d="M3.5 7.5h17v3a1.8 1.8 0 000 3.5v3h-17v-3a1.8 1.8 0 000-3.5z"/><path d="M14.5 7.5v10" stroke-dasharray="2 2"/></svg></button>
       <label class="sel" title="Language">
         <svg viewBox="0 0 24 24" fill="none" stroke="#1d1a4a" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3.6 5.2 3.6 8.5s-1.2 6.2-3.6 8.5c-2.4-2.3-3.6-5.2-3.6-8.5S9.6 5.8 12 3.5z"/></svg>
         <select id="lang" aria-label="Language"><option value="th">ไทย</option><option value="en">EN</option><option value="ja">日本語</option></select>
@@ -321,6 +345,7 @@ button{cursor:pointer;background:none;border:0;padding:0;text-align:left;-webkit
     <div class="pbody" id="pbody"></div>
   </aside>
 </div>
+<button class="pass-fab" id="passBtn" type="button"><svg viewBox="0 0 24 24" fill="#ffd23f" stroke="#1d1a4a" stroke-width="2" stroke-linejoin="round"><path d="M3.5 7.5h17v3a1.8 1.8 0 000 3.5v3h-17v-3a1.8 1.8 0 000-3.5z"/><path d="M14.5 7.5v10" stroke-dasharray="2 2" fill="none"/></svg><span id="passBtnLabel"></span></button>
 <div class="pages" id="passes" role="dialog" aria-modal="true" hidden>
   <div class="pwrap">
     <div class="p2head"><button class="vbtn" id="pClose">‹</button><h2 id="pTitle"></h2></div>
@@ -1034,7 +1059,8 @@ const PASSES = [
    who:X('ทุกคน · ผู้ใหญ่เท่านั้น ไม่มีบัตรเด็ก','Anyone · adults only, no child pass','どなたでも・大人のみ（小児用なし）'),
    buy:X('QR บนมือถือผ่านแอป/เว็บ SURUTTO QRtto จ่ายด้วยบัตรเครดิต ไม่มีบัตรกระดาษแล้ว','QR on your phone via the SURUTTO QRtto app/web, paid by credit card; no paper pass any more','スマホのQR（SURUTTO QRtto のアプリ/Web、クレジットカード決済）。紙のパスは廃止'),
    perks:X('รุ่นสนามบินคันไซ 28 ชม. ¥5,300 รวม Nankai จาก KIX → Namba ขาเดียว','KIX version: 28 hours, ¥5,300, includes one Nankai ride KIX → Namba','関空版：28時間 ¥5,300、南海 関空→なんば 片道付き'),
-   matrix:{metro:'yes', bus:'yes', loop:'no', jr:'no', nankai:'yes', kix:'part', hanshin:'yes', spots:'yes'}},
+   matrix:{metro:'yes', bus:'yes', loop:'no', jr:'no', nankai:'yes', kix:'part', hanshin:'yes', spots:'yes'},
+   partNotes:{kix:X('เฉพาะรุ่นสนามบินคันไซ (¥5,300) ได้ Nankai จาก KIX → Namba ขาเดียว รุ่นปกติใช้ไม่ได้', 'Only the Kansai Airport version (¥5,300), one Nankai ride KIX → Namba; the regular pass does not cover it', '関空版（¥5,300）のみ、南海 関空→なんば 片道。通常版は対象外')}},
 
   {id:'eco', badge:true,
    name:X('Enjoy Eco Card (บัตร 1 วัน)','Enjoy Eco Card (1-day ticket)','エンジョイエコカード（1日乗車券）'), short:X('Enjoy Eco','Enjoy Eco','エンジョイエコ'),
@@ -1046,7 +1072,8 @@ const PASSES = [
    valid:X('ทั้งวันที่ใช้ครั้งแรก','The whole day of first use','初回利用日の1日'), who:X('ทุกคน','Anyone','どなたでも'),
    buy:X('ตู้ขายตั๋วสถานี Metro หรือแบบ QR ในแอป e METRO','Metro station ticket machines, or as a QR ticket in the e METRO app','地下鉄駅の券売機、またはアプリ e METRO のQR券'),
    perks:X('ส่วนลดสถานที่ท่องเที่ยว 20+ แห่งในวันที่ใช้','Discounts at 20+ attractions on the day','20以上の施設で当日割引'),
-   matrix:{metro:'yes', bus:'yes', loop:'no', jr:'no', nankai:'no', kix:'no', hanshin:'no', spots:'part'}},
+   matrix:{metro:'yes', bus:'yes', loop:'no', jr:'no', nankai:'no', kix:'no', hanshin:'no', spots:'part'},
+   partNotes:{spots:X('ได้ส่วนลด ไม่ใช่เข้าฟรี', 'Discounts, not free entry', '割引のみ（無料入場ではない）')}},
 
   {id:'yookoshi', badge:true,
    name:X('Yookoshi 30h Pass','Yookoshi 30h Pass','ようおこし30hパス'), short:X('30h Pass','30h Pass','30hパス'),
@@ -1057,7 +1084,8 @@ const PASSES = [
    no:[X('รถบัส','Buses','バス'), X('JR และรถไฟเอกชน','JR and private railways','JR・私鉄')],
    valid:X('30 ชั่วโมงนับจากเริ่มใช้ (เริ่มภายใน 30 วันหลังซื้อ)','30 hours from activation (start within 30 days of buying)','利用開始から30時間（購入後30日以内に開始）'),
    who:X('ทุกคน','Anyone','どなたでも'), buy:X('แอป e METRO หรือเว็บ SURUTTO QRtto (QR)','e METRO app or SURUTTO QRtto web (QR)','e METRO アプリ または SURUTTO QRtto Web（QR）'),
-   matrix:{metro:'yes', bus:'no', loop:'no', jr:'no', nankai:'no', kix:'no', hanshin:'no', spots:'part'}},
+   matrix:{metro:'yes', bus:'no', loop:'no', jr:'no', nankai:'no', kix:'no', hanshin:'no', spots:'part'},
+   partNotes:{spots:X('ได้ส่วนลด ไม่ใช่เข้าฟรี', 'Discounts, not free entry', '割引のみ（無料入場ではない）')}},
 
   {id:'smart', badge:true,
    name:X('Osaka Smart Access Pass','Osaka Smart Access Pass','大阪スマートアクセスパス'), short:X('Smart Access','Smart Access','スマートアクセス'),
@@ -1154,17 +1182,20 @@ Object.assign(UI.th, {passesTitle:'บัตรโดยสาร', passesBtn:'�
   payGo:'จ่ายทีละเที่ยว', withPass:'ถ้าใช้บัตรนี้', saves:n => `ประหยัด ¥${n.toLocaleString('en-US')}`, costs:n => `แพงกว่า ¥${n.toLocaleString('en-US')}`,
   extraFare:n => `+ ค่ารถที่บัตรไม่ครอบคลุม ¥${n.toLocaleString('en-US')}`, walkLeg:'เดิน', back:'กลับ', clearPlan:'ล้าง',
   covers:'ใช้ได้กับ', notCovers:'ใช้ไม่ได้กับ', validity:'อายุบัตร', buyAt:'ซื้อที่', who:'ใครซื้อได้', perks:'สิทธิพิเศษ', compare:'เทียบบัตร',
-  passNote:'ราคาและเงื่อนไขตรวจจากเว็บผู้ให้บริการเมื่อ พ.ย. 2026 อาจเปลี่ยนได้ ตรวจอีกครั้งก่อนซื้อ', attractions:'ยังไม่รวมมูลค่าสถานที่ที่เข้าฟรี', noPass:'✕ ไม่มีบัตรเที่ยวที่ใช้ได้ทั้งเส้นทาง'});
+  passNote:'ราคาและเงื่อนไขตรวจจากเว็บผู้ให้บริการเมื่อ พ.ย. 2026 อาจเปลี่ยนได้ ตรวจอีกครั้งก่อนซื้อ', attractions:'ยังไม่รวมมูลค่าสถานที่ที่เข้าฟรี', noPass:'✕ ไม่มีบัตรเที่ยวที่ใช้ได้ทั้งเส้นทาง',
+  lgYes:'ใช้ได้', lgPart:'ใช้ได้บางส่วน (ดูหมายเหตุ)', lgNo:'ใช้ไม่ได้', lgTap:'แตะชื่อบัตรเพื่อดูรายละเอียด'});
 Object.assign(UI.en, {passesTitle:'Tickets & passes', passesBtn:'Passes', planTitle:'Which pass pays off today?', planHint:'Tap the places you will visit today, in order (round trip from your start)',
   payGo:'Pay per ride', withPass:'With this pass', saves:n => `Save ¥${n.toLocaleString('en-US')}`, costs:n => `¥${n.toLocaleString('en-US')} more`,
   extraFare:n => `+ fares the pass doesn't cover ¥${n.toLocaleString('en-US')}`, walkLeg:'Walk', back:'Back', clearPlan:'Clear',
   covers:'Covers', notCovers:'Not covered', validity:'Valid for', buyAt:'Where to buy', who:'Who can buy', perks:'Perks', compare:'Compare passes',
-  passNote:'Prices and rules checked on operator sites in Nov 2026 and may change; check again before buying', attractions:'Free attraction entry not counted', noPass:'✕ No day pass covers this whole route'});
+  passNote:'Prices and rules checked on operator sites in Nov 2026 and may change; check again before buying', attractions:'Free attraction entry not counted', noPass:'✕ No day pass covers this whole route',
+  lgYes:'Included', lgPart:'Partly (see notes)', lgNo:'Not included', lgTap:'Tap a pass name for details'});
 Object.assign(UI.ja, {passesTitle:'きっぷ・パス', passesBtn:'パス', planTitle:'今日はどのパスがお得？', planHint:'今日行くスポットを順番にタップ（出発地から往復）',
   payGo:'都度払い', withPass:'このパスなら', saves:n => `¥${n.toLocaleString('en-US')}お得`, costs:n => `¥${n.toLocaleString('en-US')}割高`,
   extraFare:n => `＋パス対象外の運賃 ¥${n.toLocaleString('en-US')}`, walkLeg:'徒歩', back:'戻る', clearPlan:'クリア',
   covers:'利用できる', notCovers:'利用できない', validity:'有効期間', buyAt:'購入場所', who:'購入できる人', perks:'特典', compare:'パス比較',
-  passNote:'料金・条件は2026年11月に各社サイトで確認。変更の可能性があるため購入前に再確認を', attractions:'施設の無料入場分は含みません', noPass:'✕ 全区間で使えるパスなし'});
+  passNote:'料金・条件は2026年11月に各社サイトで確認。変更の可能性があるため購入前に再確認を', attractions:'施設の無料入場分は含みません', noPass:'✕ 全区間で使えるパスなし',
+  lgYes:'利用可', lgPart:'一部のみ（注を参照）', lgNo:'利用不可', lgTap:'パス名をタップで詳細へ'});
 
 const yen = n => '¥' + n.toLocaleString('en-US');
 function renderPasses(focus){
@@ -1191,17 +1222,25 @@ function renderPasses(focus){
       </dl>
     </article>`).join('');
   const cols = COMPARE_COLS;
+  const notes = [];
+  const cell = (p, c) => { const v = p.matrix[c.id] || 'no';
+    if(v !== 'part') return `<td class="m-${v}">${v === 'yes' ? '✓' : '✕'}</td>`;
+    notes.push(`<b>${tr(p.short || p.name)} · ${tr(c.name)}</b>: ${tr((p.partNotes || {})[c.id] || '')}`);
+    return `<td class="m-part">△<sup>${notes.length}</sup></td>`; };
+  const rows = PASSES.filter(p => p.matrix).map(p => `<tr><th data-goto="${p.id}">${tr(p.short || p.name)}</th>${cols.map(c => cell(p, c)).join('')}</tr>`).join('');
   const table = `<div class="tscroll"><table class="cmp"><thead><tr><th></th>${cols.map(c => `<th>${tr(c.name)}</th>`).join('')}</tr></thead>
-    <tbody>${PASSES.filter(p => p.matrix).map(p => `<tr><th>${tr(p.short || p.name)}</th>${cols.map(c => `<td class="m-${p.matrix[c.id] || 'no'}">${({yes:'✓', part:'△', no:'✕'})[p.matrix[c.id] || 'no']}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    <tbody>${rows}</tbody></table></div>
+    <div class="legend"><div class="keys"><span><b class="m-yes">✓</b>${t('lgYes')}</span><span><b class="m-part">△</b>${t('lgPart')}</span><span><b class="m-no">✕</b>${t('lgNo')}</span></div>
+      ${notes.length ? `<ol>${notes.map(n => `<li>${n}</li>`).join('')}</ol>` : ''}<div class="hint" style="margin:6px 0 0">${t('lgTap')}</div></div>`;
   $('pTitle').textContent = t('passesTitle');
   $('pClose').setAttribute('aria-label', t('back'));
-  $('pBody').innerHTML = `<section class="psec">
+  $('pBody').innerHTML = `<div class="pgrid"><section class="psec">
       <h2>${t('planTitle')}</h2><p class="hint">${t('planHint')} · ${tr(ORIGIN.name)}</p>
       <div class="chips wrap">${chips}${plan.ids.length ? `<button class="pill" data-plan-clear>${t('clearPlan')}</button>` : ''}</div>
       ${result}
     </section>
-    <section class="psec"><h2>${t('compare')}</h2>${table}</section>
-    <section class="psec">${cards}<p class="note">${t('passNote')}</p></section>`;
+    <section class="psec"><h2>${t('compare')}</h2>${table}</section></div>
+    <section class="psec"><div class="pcards">${cards}</div><p class="note">${t('passNote')}</p></section>`;
   if(focus){ const el = document.getElementById('pass-' + focus); if(el){ el.scrollIntoView({block:'start'}); el.classList.add('flash'); } }
 }
 function openPasses(focus){
@@ -1219,6 +1258,8 @@ $('pBody').addEventListener('click', e => {
   if(c){ const id = c.dataset.plan, k = plan.ids.indexOf(id);
     if(k >= 0) plan.ids.splice(k, 1); else { plan.ids.push(id); burst(c, {size:.4}); }
     const top = $('pBody').scrollTop; renderPasses(); $('pBody').scrollTop = top; return; }
+  const g = e.target.closest('[data-goto]');
+  if(g){ const el = document.getElementById('pass-' + g.dataset.goto); if(el){ el.scrollIntoView({block:'start', behavior:calm.matches ? 'auto' : 'smooth'}); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); } return; }
   if(e.target.closest('[data-plan-clear]')){ plan.ids = []; const top = $('pBody').scrollTop; renderPasses(); $('pBody').scrollTop = top; }
 });
 addEventListener('keydown', e => { if(e.key === 'Escape' && !$('passes').hidden && !VIEW.key) closePasses(); });
@@ -1228,7 +1269,7 @@ addEventListener('keydown', e => { if(e.key === 'Escape' && !$('passes').hidden 
 const SHEET = {snap:'half'};
 const sheetPx = s => { const H = innerHeight; return s === 'peek' ? 164 : s === 'half' ? Math.round(H * .5) : H - 72; };
 const applySheet = px => document.documentElement.style.setProperty('--sheet-h', px + 'px');
-function setSheet(s){ SHEET.snap = s; applySheet(sheetPx(s)); }
+function setSheet(s){ SHEET.snap = s; document.documentElement.dataset.sheet = s; applySheet(sheetPx(s)); }
 
 /* ================= MAP ================= */
 const map = L.map('map', {zoomControl:false}).setView([34.668,135.49], 13);
@@ -1292,7 +1333,7 @@ function renderStatic(){
   $('brand').textContent = t('brand'); $('tagline').textContent = t('tagline');
   $('q').placeholder = t('placeholder'); $('clear').setAttribute('aria-label', t('clear'));
   $('lang').value = LANG;
-  $('passBtn').setAttribute('aria-label', t('passesTitle')); $('passBtn').title = t('passesTitle');
+  $('passBtnLabel').textContent = t('passesTitle');
 }
 const originSelect = () => `<label class="sel"><select id="origin" aria-label="${t('origin')}">${ORIGINS.map(o =>
   `<option value="${o.id}"${o === ORIGIN ? ' selected' : ''}>${tr(o.name)}</option>`).join('')}</select></label>`;
